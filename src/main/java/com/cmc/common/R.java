@@ -21,6 +21,10 @@ public class R<T> {
         return new R<>(200, "操作成功", data);
     }
 
+    public static R<Void> ok(String msg) {
+        return new R<>(200, msg, null);
+    }
+
     public static <T> R<T> ok(String msg, T data) {
         return new R<>(200, msg, data);
     }
