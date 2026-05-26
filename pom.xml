@@ -23,7 +23,7 @@
         <sa-token.version>1.38.0</sa-token.version>
         <easyexcel.version>3.3.4</easyexcel.version>
         <knife4j.version>4.5.0</knife4j.version>
-        <lombok.version>1.18.32</lombok.version>
+        <lombok.version>1.18.38</lombok.version>
     </properties>
 
     <dependencies>

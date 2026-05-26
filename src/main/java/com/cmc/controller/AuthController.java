@@ -70,13 +70,23 @@ public class AuthController {
 
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/me")
-    public R<User> me() {
+    public R<Map<String, Object>> me() {
         long userId = StpUtil.getLoginIdAsLong();
         User user = userService.getById(userId);
         if (user == null) {
             return R.fail(401, "用户不存在");
         }
-        return R.ok(user);
+        Map<String, Object> data = new HashMap<>();
+        data.put("userInfo", user);
+        if (user.getRoleId() != null) {
+            Role role = roleMapper.selectById(user.getRoleId());
+            data.put("role", role != null ? role.getName() : "");
+            data.put("permissions", role != null ? role.getFunctions() : "");
+        } else {
+            data.put("role", "");
+            data.put("permissions", "");
+        }
+        return R.ok(data);
     }
 
     private void recordLoginLog(Long userId, String username, HttpServletRequest request, int status, String msg) {

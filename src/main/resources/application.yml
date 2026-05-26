@@ -28,6 +28,7 @@ sa-token:
   token-name: Authorization
   token-style: tik
   is-read-cookie: false
+  is-read-bearer: true
   timeout: 86400
 
 knife4j:
