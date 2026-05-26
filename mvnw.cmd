@@ -11,8 +11,8 @@ if not exist "%WRAPPER_JAR%" (
     )
 )
 
+set "JAVA_HOME=C:\Program Files\Java\jdk-21"
 set "JDK_BIN=%JAVA_HOME%\bin\java.exe"
-if not exist "%JDK_BIN%" set "JDK_BIN=java.exe"
 
 "%JDK_BIN%" -classpath "%WRAPPER_JAR%" -Dmaven.multiModuleProjectDirectory="%DIR%" org.apache.maven.wrapper.MavenWrapperMain %*
 exit /b %ERRORLEVEL%
