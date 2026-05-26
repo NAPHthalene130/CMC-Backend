@@ -5,8 +5,10 @@ import com.cmc.common.R;
 import com.cmc.dto.LoginDTO;
 import com.cmc.dto.RegisterDTO;
 import com.cmc.entity.LoginLog;
+import com.cmc.entity.Role;
 import com.cmc.entity.User;
 import com.cmc.mapper.LoginLogMapper;
+import com.cmc.mapper.RoleMapper;
 import com.cmc.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +29,7 @@ public class AuthController {
 
     private final UserService userService;
     private final LoginLogMapper loginLogMapper;
+    private final RoleMapper roleMapper;
 
     @Operation(summary = "用户注册")
     @PostMapping("/register")
@@ -44,6 +47,13 @@ public class AuthController {
             Map<String, Object> data = new HashMap<>();
             data.put("token", StpUtil.getTokenValue());
             data.put("user", user);
+
+            if (user.getRoleId() != null) {
+                Role role = roleMapper.selectById(user.getRoleId());
+                data.put("role", role != null ? role.getName() : "");
+            } else {
+                data.put("role", "");
+            }
             return R.ok(data);
         } catch (Exception e) {
             recordLoginLog(null, dto.getUsername(), request, 0, e.getMessage());
