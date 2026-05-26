@@ -88,6 +88,11 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
 
     @Override
     public Page<Contract> pageByState(long page, long pageSize, Integer stateType) {
-        return null;
+        LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>()
+                .orderByDesc(Contract::getCreateTime);
+        if (stateType != null) {
+            wrapper.exists("SELECT 1 FROM contract_state cs WHERE cs.contract_id = contract.id AND cs.type = {0}", stateType);
+        }
+        return page(new Page<>(page, pageSize), wrapper);
     }
 }

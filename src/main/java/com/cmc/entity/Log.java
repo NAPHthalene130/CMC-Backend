@@ -13,4 +13,6 @@ public class Log {
     private String username;
     private String content;
     private LocalDateTime time;
+    private String ip;
+    private String type;
 }
