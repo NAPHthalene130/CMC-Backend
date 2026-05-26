@@ -1,5 +1,6 @@
 package com.cmc.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cmc.common.R;
 import com.cmc.common.PageResult;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+@SaCheckRole("ADMIN")
 @Tag(name = "功能操作管理")
 @RestController
 @RequestMapping("/api/functions")

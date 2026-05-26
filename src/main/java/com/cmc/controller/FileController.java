@@ -1,5 +1,6 @@
 package com.cmc.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.cmc.common.R;
 import com.cmc.entity.ContractAttachment;
 import com.cmc.mapper.ContractAttachmentMapper;
@@ -102,6 +103,7 @@ public class FileController {
         return R.ok(list);
     }
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "删除附件")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {

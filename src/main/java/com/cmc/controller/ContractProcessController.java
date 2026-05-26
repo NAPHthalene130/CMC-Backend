@@ -1,5 +1,6 @@
 package com.cmc.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.cmc.common.R;
 import com.cmc.dto.AssignDTO;
@@ -22,6 +23,7 @@ public class ContractProcessController {
 
     private final ContractProcessService processService;
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "分配合同（管理员）")
     @PostMapping("/assign")
     public R<Void> assign(@Valid @RequestBody AssignDTO dto) {

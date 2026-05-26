@@ -5,13 +5,16 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.AssignDTO;
 import com.cmc.dto.ProcessDTO;
+import com.cmc.entity.Contract;
 import com.cmc.entity.ContractProcess;
 import com.cmc.entity.ContractState;
 import com.cmc.entity.User;
+import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractProcessMapper;
 import com.cmc.mapper.ContractStateMapper;
 import com.cmc.service.ContractProcessService;
 import com.cmc.service.LogService;
+import com.cmc.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +23,18 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @author NAPH130
+ */
 @Service
 @RequiredArgsConstructor
 public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMapper, ContractProcess>
         implements ContractProcessService {
 
     private final ContractStateMapper contractStateMapper;
+    private final ContractMapper contractMapper;
     private final LogService logService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -70,6 +78,17 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
 
         saveBatch(processes);
 
+        Contract contract = contractMapper.selectById(dto.getContractId());
+        String contractName = contract != null ? contract.getName() : "未知合同";
+
+        for (ContractProcess p : processes) {
+            String typeName = p.getType() == 1 ? "会签" : p.getType() == 2 ? "审批" : "签订";
+            notificationService.sendNotification(p.getUserId(),
+                    "新的" + typeName + "任务",
+                    "合同「" + contractName + "」已分配给您，请尽快处理",
+                    "CONTRACT", dto.getContractId());
+        }
+
         User operator = (User) StpUtil.getSession().get("user");
         logService.saveLog(operator.getId(), operator.getUsername(),
                 "分配合同：" + dto.getContractId());
@@ -93,8 +112,17 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
         process.setTime(LocalDateTime.now());
         updateById(process);
 
+        Contract contract = contractMapper.selectById(dto.getContractId());
+        String contractName = contract != null ? contract.getName() : "未知合同";
+
         if (allCompleted(dto.getContractId(), 1)) {
             saveContractState(dto.getContractId(), 2);
+            if (contract != null) {
+                notificationService.sendNotification(contract.getUserId(),
+                        "会签全部完成",
+                        "合同「" + contractName + "」的所有会签已完成，请进行定稿",
+                        "CONTRACT", dto.getContractId());
+            }
         }
 
         logService.saveLog(userId, getUsername(userId), "会签合同：" + dto.getContractId());
@@ -109,8 +137,24 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
         process.setTime(LocalDateTime.now());
         updateById(process);
 
+        Contract contract = contractMapper.selectById(dto.getContractId());
+        String contractName = contract != null ? contract.getName() : "未知合同";
+
         if (dto.getApproved() != null && dto.getApproved() && allApproved(dto.getContractId())) {
             saveContractState(dto.getContractId(), 4);
+            if (contract != null) {
+                notificationService.sendNotification(contract.getUserId(),
+                        "审批已通过",
+                        "合同「" + contractName + "」已通过审批，请进行签订",
+                        "CONTRACT", dto.getContractId());
+            }
+        } else if (dto.getApproved() != null && !dto.getApproved()) {
+            if (contract != null) {
+                notificationService.sendNotification(contract.getUserId(),
+                        "审批被拒绝",
+                        "合同「" + contractName + "」审批未通过，请查看审批意见并修改",
+                        "CONTRACT", dto.getContractId());
+            }
         }
 
         logService.saveLog(userId, getUsername(userId), "审批合同：" + dto.getContractId());
@@ -125,8 +169,17 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
         process.setTime(LocalDateTime.now());
         updateById(process);
 
+        Contract contract2 = contractMapper.selectById(dto.getContractId());
+        String contractName2 = contract2 != null ? contract2.getName() : "未知合同";
+
         if (allCompleted(dto.getContractId(), 3)) {
             saveContractState(dto.getContractId(), 5);
+            if (contract2 != null) {
+                notificationService.sendNotification(contract2.getUserId(),
+                        "签订全部完成",
+                        "合同「" + contractName2 + "」的所有签订已完成，合同流程结束",
+                        "CONTRACT", dto.getContractId());
+            }
         }
 
         logService.saveLog(userId, getUsername(userId), "签订合同：" + dto.getContractId());

@@ -1,5 +1,6 @@
 package com.cmc.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cmc.common.R;
@@ -38,8 +39,14 @@ public class ContractController {
     @GetMapping
     public R<PageResult<Contract>> page(@RequestParam(defaultValue = "1") long page,
                                          @RequestParam(defaultValue = "10") long pageSize,
-                                         @RequestParam(required = false) String keyword) {
-        Page<Contract> result = contractService.pageContracts(page, pageSize, keyword);
+                                         @RequestParam(required = false) String keyword,
+                                         @RequestParam(required = false) Integer state) {
+        Page<Contract> result;
+        if (state != null) {
+            result = contractService.pageByState(page, pageSize, state);
+        } else {
+            result = contractService.pageContracts(page, pageSize, keyword);
+        }
         return R.ok(PageResult.of(result));
     }
 
@@ -49,6 +56,7 @@ public class ContractController {
         return R.ok(contractService.getById(id));
     }
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "删除合同")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {

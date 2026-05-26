@@ -11,22 +11,32 @@ import com.cmc.entity.ContractState;
 import com.cmc.entity.User;
 import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractStateMapper;
+import com.cmc.mapper.UserMapper;
 import com.cmc.service.ContractService;
+import com.cmc.service.ContractVersionService;
 import com.cmc.service.LogService;
+import com.cmc.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
+/**
+ * @author NAPH130
+ */
 @Service
 @RequiredArgsConstructor
 public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> implements ContractService {
 
     private final ContractStateMapper contractStateMapper;
+    private final UserMapper userMapper;
     private final LogService logService;
+    private final NotificationService notificationService;
+    private final ContractVersionService versionService;
 
     @Override
     @Transactional
@@ -47,8 +57,21 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         state.setTime(LocalDateTime.now());
         contractStateMapper.insert(state);
 
+        versionService.saveVersion(contract.getId(), contract.getName(), contract.getContent(),
+                "首次起草", userId);
+
         User operator = (User) StpUtil.getSession().get("user");
         logService.saveLog(operator.getId(), operator.getUsername(), "起草合同：" + contract.getName());
+
+        List<User> admins = userMapper.selectList(
+                new LambdaQueryWrapper<User>().eq(User::getRoleId, 1));
+        for (User admin : admins) {
+            notificationService.sendNotification(admin.getId(),
+                    "新合同待分配",
+                    "用户「" + operator.getUsername() + "」起草了合同「" + contract.getName() + "」，请及时分配",
+                    "CONTRACT", contract.getId());
+        }
+
         return contract;
     }
 
@@ -72,8 +95,22 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         state.setTime(LocalDateTime.now());
         contractStateMapper.insert(state);
 
+        Long currentUserId = StpUtil.getLoginIdAsLong();
+        versionService.saveVersion(contract.getId(), contract.getName(), contract.getContent(),
+                "定稿修订", currentUserId);
+
         User operator = (User) StpUtil.getSession().get("user");
         logService.saveLog(operator.getId(), operator.getUsername(), "定稿合同：" + contract.getName());
+
+        List<User> admins = userMapper.selectList(
+                new LambdaQueryWrapper<User>().eq(User::getRoleId, 1));
+        for (User admin : admins) {
+            notificationService.sendNotification(admin.getId(),
+                    "合同已定稿待审批",
+                    "合同「" + contract.getName() + "」已定稿，请关注审批进度",
+                    "CONTRACT", contract.getId());
+        }
+
         return contract;
     }
 

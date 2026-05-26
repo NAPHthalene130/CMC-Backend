@@ -1,5 +1,6 @@
 package com.cmc.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.cmc.common.R;
 import com.cmc.dto.DashboardStats;
@@ -9,6 +10,7 @@ import com.cmc.entity.Customer;
 import com.cmc.entity.User;
 import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractProcessMapper;
+import com.cmc.mapper.ContractStateMapper;
 import com.cmc.mapper.CustomerMapper;
 import com.cmc.mapper.UserMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@SaCheckRole("ADMIN")
 @Tag(name = "仪表盘统计")
 @RestController
 @RequestMapping("/api/statistics")
@@ -27,6 +30,7 @@ import java.util.*;
 public class StatisticsController {
 
     private final ContractMapper contractMapper;
+    private final ContractStateMapper contractStateMapper;
     private final ContractProcessMapper processMapper;
     private final UserMapper userMapper;
     private final CustomerMapper customerMapper;
@@ -72,23 +76,37 @@ public class StatisticsController {
     @Operation(summary = "获取合同状态分布")
     @GetMapping("/contract-status")
     public R<List<Map<String, Object>>> contractStatus() {
+        List<Map<String, Object>> rawData = contractStateMapper.countByType();
+        Map<Integer, String> typeNames = new LinkedHashMap<>();
+        typeNames.put(1, "起草中");
+        typeNames.put(2, "会签完成");
+        typeNames.put(3, "定稿完成");
+        typeNames.put(4, "审批完成");
+        typeNames.put(5, "签订完成");
+
         List<Map<String, Object>> result = new ArrayList<>();
-        // Simulate for now - in production, query contract_state table
-        // Waiting for contract_state data to be populated
+        for (Map.Entry<Integer, String> entry : typeNames.entrySet()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("type", entry.getKey());
+            item.put("name", entry.getValue());
+            long count = 0;
+            for (Map<String, Object> row : rawData) {
+                if (entry.getKey().equals(row.get("type"))) {
+                    count = ((Number) row.get("count")).longValue();
+                    break;
+                }
+            }
+            item.put("value", count);
+            result.add(item);
+        }
         return R.ok(result);
     }
 
     @Operation(summary = "获取月度合同趋势")
     @GetMapping("/monthly-trend")
     public R<List<Map<String, Object>>> monthlyTrend() {
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (int i = 1; i <= 6; i++) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("month", i + "月");
-            item.put("count", 0);
-            result.add(item);
-        }
-        return R.ok(result);
+        List<Map<String, Object>> rawData = contractMapper.monthlyTrend();
+        return R.ok(rawData);
     }
 
     @Operation(summary = "获取到期预警合同列表")

@@ -1,5 +1,6 @@
 package com.cmc.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cmc.common.R;
 import com.cmc.common.PageResult;
@@ -35,18 +36,21 @@ public class CustomerController {
         return R.ok(customerService.getById(id));
     }
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "新增客户")
     @PostMapping
     public R<Customer> add(@Valid @RequestBody CustomerDTO dto) {
         return R.ok(customerService.addCustomer(dto));
     }
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "修改客户")
     @PutMapping("/{id}")
     public R<Customer> update(@PathVariable Long id, @Valid @RequestBody CustomerDTO dto) {
         return R.ok(customerService.updateCustomer(id, dto));
     }
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "删除客户")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
