@@ -72,7 +72,10 @@ public class AuthController {
     @GetMapping("/me")
     public R<User> me() {
         long userId = StpUtil.getLoginIdAsLong();
-        User user = (User) StpUtil.getSession().get("user");
+        User user = userService.getById(userId);
+        if (user == null) {
+            return R.fail(401, "用户不存在");
+        }
         return R.ok(user);
     }
 
