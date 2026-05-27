@@ -17,6 +17,7 @@ public class AuthUserVO {
     private String username;
     private Long roleId;
     private String role;
+    private String roleName;
     private List<String> permissions = new ArrayList<>();
     private LocalDateTime createTime;
 }

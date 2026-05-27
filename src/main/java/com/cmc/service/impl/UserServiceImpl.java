@@ -70,10 +70,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         Role role = user.getRoleId() == null ? null : roleMapper.selectById(user.getRoleId());
         if (role == null) {
             vo.setRole(NEW_USER_ROLE);
+            vo.setRoleName(roleDisplayName(NEW_USER_ROLE));
             vo.setPermissions(Collections.emptyList());
             return vo;
         }
-        vo.setRole(role.getName());
+        String roleCode = normalizeRoleCode(role.getName());
+        vo.setRole(roleCode);
+        vo.setRoleName(roleDisplayName(roleCode));
         vo.setPermissions(parsePermissions(role.getFunctions()));
         return vo;
     }
@@ -147,5 +150,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .map(String::trim)
                 .filter(StringUtils::hasText)
                 .toList();
+    }
+
+    private String normalizeRoleCode(String roleName) {
+        if (!StringUtils.hasText(roleName)) {
+            return NEW_USER_ROLE;
+        }
+        String value = roleName.trim();
+        return switch (value) {
+            case "合同管理员", "管理员", "ADMIN" -> "ADMIN";
+            case "合同操作员", "操作员", "OPERATOR" -> "OPERATOR";
+            case "新用户", "NEW_USER" -> NEW_USER_ROLE;
+            default -> value;
+        };
+    }
+
+    private String roleDisplayName(String roleCode) {
+        return switch (roleCode) {
+            case "ADMIN" -> "合同管理员";
+            case "OPERATOR" -> "合同操作员";
+            case "NEW_USER" -> "新用户";
+            default -> roleCode;
+        };
     }
 }
