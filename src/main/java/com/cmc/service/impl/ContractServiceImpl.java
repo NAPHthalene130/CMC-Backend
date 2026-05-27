@@ -152,6 +152,9 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
 
     @Override
     public Page<Contract> pageByState(long page, long pageSize, Integer stateType, String keyword) {
+        if (stateType != null && (stateType < 1 || stateType > 5)) {
+            throw new BusinessException("合同状态不正确");
+        }
         LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>()
                 .inSql(stateType != null, Contract::getId,
                         "select cs.contract_id from contract_state cs " +

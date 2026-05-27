@@ -22,7 +22,9 @@ public class SaTokenConfig implements WebMvcConfigurer {
                     SaRouter.match("/api/contracts/*/attachments", r -> StpUtil.checkPermission("C_DRAFT"));
                     SaRouter.match("/api/contracts/attachments/*/download", r -> StpUtil.checkPermission("C_QUERY"));
                     SaRouter.match("/api/contracts/*/finalize", r -> StpUtil.checkPermission("C_FINAL"));
+                    SaRouter.match("/api/contracts/stats", r -> StpUtil.checkPermission("C_QUERY"));
                     SaRouter.match("/api/contracts", r -> StpUtil.checkPermission("C_QUERY"));
+                    SaRouter.match("/api/process/contracts/**", r -> StpUtil.checkPermission("P_QUERY"));
                     SaRouter.match("/api/process/countersign", r -> StpUtil.checkPermission("P_COUNTER"));
                     SaRouter.match("/api/process/approve", r -> StpUtil.checkPermission("P_APPROVE"));
                     SaRouter.match("/api/process/sign", r -> StpUtil.checkPermission("P_SIGN"));
