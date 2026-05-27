@@ -41,24 +41,26 @@ public class AuthController {
     @Operation(summary = "用户登录")
     @PostMapping("/login")
     public R<Map<String, Object>> login(@Valid @RequestBody LoginDTO dto, HttpServletRequest request) {
+        User user;
         try {
-            User user = userService.login(dto.getUsername(), dto.getPassword());
-            recordLoginLog(user.getId(), user.getUsername(), request, 1, "登录成功");
-            Map<String, Object> data = new HashMap<>();
-            data.put("token", StpUtil.getTokenValue());
-            data.put("user", user);
-
-            if (user.getRoleId() != null) {
-                Role role = roleMapper.selectById(user.getRoleId());
-                data.put("role", role != null ? role.getName() : "");
-            } else {
-                data.put("role", "");
-            }
-            return R.ok(data);
+            user = userService.login(dto.getUsername(), dto.getPassword());
         } catch (Exception e) {
             recordLoginLog(null, dto.getUsername(), request, 0, e.getMessage());
             throw e;
         }
+
+        recordLoginLog(user.getId(), user.getUsername(), request, 1, "登录成功");
+        Map<String, Object> data = new HashMap<>();
+        data.put("token", StpUtil.getTokenValue());
+        data.put("user", user);
+
+        if (user.getRoleId() != null) {
+            Role role = roleMapper.selectById(user.getRoleId());
+            data.put("role", role != null ? role.getName() : "");
+        } else {
+            data.put("role", "");
+        }
+        return R.ok(data);
     }
 
     @Operation(summary = "登出")

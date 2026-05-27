@@ -90,8 +90,10 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
         }
 
         User operator = (User) StpUtil.getSession().get("user");
-        logService.saveLog(operator.getId(), operator.getUsername(),
-                "分配合同：" + dto.getContractId());
+        if (operator != null) {
+            logService.saveLog(operator.getId(), operator.getUsername(),
+                    "分配合同：" + dto.getContractId());
+        }
     }
 
     @Override
@@ -207,6 +209,12 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     }
 
     private boolean allApproved(Long contractId) {
+        long rejectedCount = lambdaQuery()
+                .eq(ContractProcess::getContractId, contractId)
+                .eq(ContractProcess::getType, 2)
+                .eq(ContractProcess::getState, 2)
+                .count();
+        if (rejectedCount > 0) return false;
         return lambdaQuery()
                 .eq(ContractProcess::getContractId, contractId)
                 .eq(ContractProcess::getType, 2)
@@ -223,6 +231,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     }
 
     private String getUsername(Long userId) {
-        return (String) StpUtil.getSession().get("username");
+        User user = (User) StpUtil.getSession().get("user");
+        return user != null ? user.getUsername() : "未知用户";
     }
 }

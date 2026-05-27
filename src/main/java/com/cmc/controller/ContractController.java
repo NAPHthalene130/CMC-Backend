@@ -43,7 +43,7 @@ public class ContractController {
                                          @RequestParam(required = false) Integer state) {
         Page<Contract> result;
         if (state != null) {
-            result = contractService.pageByState(page, pageSize, state);
+            result = contractService.pageByState(page, pageSize, state, keyword);
         } else {
             result = contractService.pageContracts(page, pageSize, keyword);
         }

@@ -59,7 +59,7 @@ class NotificationServiceImplTest {
     @Test
     void markRead_shouldUpdateNotification() {
         when(notificationMapper.update(any(), any())).thenReturn(1);
-        assertDoesNotThrow(() -> notificationService.markRead(1L));
+        assertDoesNotThrow(() -> notificationService.markRead(1L, 1L));
     }
 
     @Test

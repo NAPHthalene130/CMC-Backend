@@ -38,9 +38,10 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
     }
 
     @Override
-    public void markRead(Long id) {
+    public void markRead(Long id, Long userId) {
         update(new LambdaUpdateWrapper<Notification>()
                 .eq(Notification::getId, id)
+                .eq(Notification::getUserId, userId)
                 .set(Notification::getIsRead, 1));
     }
 

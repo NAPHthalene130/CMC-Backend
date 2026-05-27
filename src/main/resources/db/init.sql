@@ -4,8 +4,8 @@
 -- Version: 1.0
 -- ============================================
 
-CREATE DATABASE IF NOT EXISTS cmc DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE cmc;
+CREATE DATABASE IF NOT EXISTS cms_fastDev2 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE cms_fastDev2;
 
 -- ----------------------------
 -- 1. 用户表
@@ -300,4 +300,4 @@ INSERT INTO `function` (`id`, `num`, `name`, `url`, `description`, `parent_id`, 
 -- 种子数据：默认管理员
 -- ----------------------------
 INSERT INTO `user` (`id`, `username`, `password`, `role_id`, `status`) VALUES
-(1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5Eh', 1, 1);
+(1, 'admin', '$2a$10$lK6DzK40yyvGeZ6nNlWwY.hjIAJfPCkdqzaE5wPncYWB3fMk9/CdG', 1, 1);

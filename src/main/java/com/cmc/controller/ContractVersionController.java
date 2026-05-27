@@ -1,5 +1,6 @@
 package com.cmc.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.cmc.common.R;
 import com.cmc.entity.ContractVersion;
 import com.cmc.service.ContractVersionService;
@@ -13,6 +14,7 @@ import java.util.List;
 /**
  * @author NAPH130
  */
+@SaCheckLogin
 @Tag(name = "合同版本管理")
 @RestController
 @RequestMapping("/api/contract-versions")

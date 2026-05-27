@@ -9,5 +9,5 @@ public interface ContractService extends IService<Contract> {
     Contract draft(Long userId, ContractDTO dto);
     Contract finalize(Long id, ContractDTO dto);
     Page<Contract> pageContracts(long page, long pageSize, String keyword);
-    Page<Contract> pageByState(long page, long pageSize, Integer stateType);
+    Page<Contract> pageByState(long page, long pageSize, Integer stateType, String keyword);
 }

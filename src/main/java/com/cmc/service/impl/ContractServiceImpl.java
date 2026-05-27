@@ -61,15 +61,17 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
                 "首次起草", userId);
 
         User operator = (User) StpUtil.getSession().get("user");
-        logService.saveLog(operator.getId(), operator.getUsername(), "起草合同：" + contract.getName());
+        if (operator != null) {
+            logService.saveLog(operator.getId(), operator.getUsername(), "起草合同：" + contract.getName());
 
-        List<User> admins = userMapper.selectList(
-                new LambdaQueryWrapper<User>().eq(User::getRoleId, 1));
-        for (User admin : admins) {
-            notificationService.sendNotification(admin.getId(),
-                    "新合同待分配",
-                    "用户「" + operator.getUsername() + "」起草了合同「" + contract.getName() + "」，请及时分配",
-                    "CONTRACT", contract.getId());
+            List<User> admins = userMapper.selectList(
+                    new LambdaQueryWrapper<User>().eq(User::getRoleId, 1));
+            for (User admin : admins) {
+                notificationService.sendNotification(admin.getId(),
+                        "新合同待分配",
+                        "用户「" + operator.getUsername() + "」起草了合同「" + contract.getName() + "」，请及时分配",
+                        "CONTRACT", contract.getId());
+            }
         }
 
         return contract;
@@ -100,7 +102,9 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
                 "定稿修订", currentUserId);
 
         User operator = (User) StpUtil.getSession().get("user");
-        logService.saveLog(operator.getId(), operator.getUsername(), "定稿合同：" + contract.getName());
+        if (operator != null) {
+            logService.saveLog(operator.getId(), operator.getUsername(), "定稿合同：" + contract.getName());
+        }
 
         List<User> admins = userMapper.selectList(
                 new LambdaQueryWrapper<User>().eq(User::getRoleId, 1));
@@ -116,19 +120,25 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
 
     @Override
     public Page<Contract> pageContracts(long page, long pageSize, String keyword) {
-        LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>()
-                .like(StringUtils.hasText(keyword), Contract::getName, keyword)
-                .or().like(StringUtils.hasText(keyword), Contract::getNum, keyword)
-                .orderByDesc(Contract::getCreateTime);
+        LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>();
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like(Contract::getName, keyword)
+                    .or().like(Contract::getNum, keyword));
+        }
+        wrapper.orderByDesc(Contract::getCreateTime);
         return page(new Page<>(page, pageSize), wrapper);
     }
 
     @Override
-    public Page<Contract> pageByState(long page, long pageSize, Integer stateType) {
+    public Page<Contract> pageByState(long page, long pageSize, Integer stateType, String keyword) {
         LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>()
                 .orderByDesc(Contract::getCreateTime);
         if (stateType != null) {
-            wrapper.exists("SELECT 1 FROM contract_state cs WHERE cs.contract_id = contract.id AND cs.type = {0}", stateType);
+            wrapper.exists("SELECT 1 FROM contract_state cs WHERE cs.contract_id = contract.id AND cs.type = " + stateType);
+        }
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like(Contract::getName, keyword)
+                    .or().like(Contract::getNum, keyword));
         }
         return page(new Page<>(page, pageSize), wrapper);
     }

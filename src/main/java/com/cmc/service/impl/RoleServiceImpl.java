@@ -17,6 +17,8 @@ import org.springframework.util.StringUtils;
 
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
 public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements RoleService {
@@ -24,6 +26,7 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     private final LogService logService;
 
     @Override
+    @Transactional
     public Role addRole(RoleDTO dto) {
         if (lambdaQuery().eq(Role::getName, dto.getName()).count() > 0) {
             throw new BusinessException("角色名称已存在");
@@ -38,11 +41,14 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         save(role);
 
         User operator = (User) StpUtil.getSession().get("user");
-        logService.saveLog(operator.getId(), operator.getUsername(), "新增角色：" + role.getName());
+        if (operator != null) {
+            logService.saveLog(operator.getId(), operator.getUsername(), "新增角色：" + role.getName());
+        }
         return role;
     }
 
     @Override
+    @Transactional
     public Role updateRole(Long id, RoleDTO dto) {
         Role role = getById(id);
         if (role == null) {
@@ -50,14 +56,16 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         }
         role.setName(dto.getName());
         role.setDescription(dto.getDescription());
-        if (dto.getFunctionIds() != null) {
+        if (dto.getFunctionIds() != null && !dto.getFunctionIds().isEmpty()) {
             role.setFunctions(dto.getFunctionIds().stream()
                     .map(String::valueOf).collect(Collectors.joining(",")));
         }
         updateById(role);
 
         User operator = (User) StpUtil.getSession().get("user");
-        logService.saveLog(operator.getId(), operator.getUsername(), "修改角色：" + role.getName());
+        if (operator != null) {
+            logService.saveLog(operator.getId(), operator.getUsername(), "修改角色：" + role.getName());
+        }
         return role;
     }
 

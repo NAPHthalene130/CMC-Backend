@@ -41,7 +41,8 @@ public class NotificationController {
     @Operation(summary = "标记通知为已读")
     @PutMapping("/{id}/read")
     public R<Void> markRead(@PathVariable Long id) {
-        notificationService.markRead(id);
+        long userId = StpUtil.getLoginIdAsLong();
+        notificationService.markRead(id, userId);
         return R.ok();
     }
 
