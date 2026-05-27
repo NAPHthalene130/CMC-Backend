@@ -99,6 +99,18 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
                 .toList();
     }
 
+    @Override
+    public List<ProcessTaskVO> getContractProcesses(Long contractId, Integer type) {
+        return lambdaQuery()
+                .eq(ContractProcess::getContractId, contractId)
+                .eq(type != null, ContractProcess::getType, type)
+                .orderByAsc(ContractProcess::getTime)
+                .list()
+                .stream()
+                .map(this::toTaskVO)
+                .toList();
+    }
+
     private ProcessTaskVO toTaskVO(ContractProcess process) {
         ProcessTaskVO vo = new ProcessTaskVO();
         vo.setId(process.getId());

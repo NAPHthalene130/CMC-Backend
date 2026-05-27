@@ -11,6 +11,7 @@ import java.util.List;
 public interface ContractProcessService extends IService<ContractProcess> {
     void assignContract(AssignDTO dto);
     List<ProcessTaskVO> getPendingTasks(Long userId, Integer type);
+    List<ProcessTaskVO> getContractProcesses(Long contractId, Integer type);
     void countersign(Long userId, ProcessDTO dto);
     void approve(Long userId, ProcessDTO dto);
     void sign(Long userId, ProcessDTO dto);
