@@ -8,6 +8,7 @@ import com.cmc.dto.ContractDTO;
 import com.cmc.entity.Contract;
 import com.cmc.entity.ContractAttachment;
 import com.cmc.service.ContractService;
+import com.cmc.vo.ContractStatsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -75,13 +76,19 @@ public class ContractController {
     @Operation(summary = "分页查询合同")
     @GetMapping
     public R<PageResult<Contract>> page(@RequestParam(defaultValue = "1") long page,
-                                          @RequestParam(defaultValue = "10") long pageSize,
+                                           @RequestParam(defaultValue = "10") long pageSize,
                                           @RequestParam(required = false) String keyword,
                                           @RequestParam(required = false) Integer stateType) {
         Page<Contract> result = stateType == null
                 ? contractService.pageContracts(page, pageSize, keyword)
                 : contractService.pageByState(page, pageSize, stateType, keyword);
         return R.ok(PageResult.of(result));
+    }
+
+    @Operation(summary = "合同状态统计")
+    @GetMapping("/stats")
+    public R<ContractStatsVO> stats() {
+        return R.ok(contractService.getStats());
     }
 
     @Operation(summary = "获取合同详情")

@@ -15,6 +15,7 @@ import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractStateMapper;
 import com.cmc.service.ContractService;
 import com.cmc.service.LogService;
+import com.cmc.vo.ContractStatsVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -162,6 +163,18 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
                         .like(Contract::getNum, keyword))
                 .orderByDesc(Contract::getCreateTime);
         return page(new Page<>(page, pageSize), wrapper);
+    }
+
+    @Override
+    public ContractStatsVO getStats() {
+        ContractStatsVO stats = new ContractStatsVO();
+        stats.setTotal(count());
+        stats.setDraft(pageByState(1, 1, 1, null).getTotal());
+        stats.setCountersigned(pageByState(1, 1, 2, null).getTotal());
+        stats.setFinalized(pageByState(1, 1, 3, null).getTotal());
+        stats.setApproved(pageByState(1, 1, 4, null).getTotal());
+        stats.setSigned(pageByState(1, 1, 5, null).getTotal());
+        return stats;
     }
 
     private void validateContractTime(ContractDTO dto) {
