@@ -1,7 +1,9 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
   profiles:
     active: dev
   servlet:
@@ -24,7 +26,10 @@ sa-token:
   token-name: Authorization
   token-style: tik
   is-read-cookie: false
-  timeout: 86400
+  timeout: ${SA_TOKEN_TIMEOUT:86400}
+
+cmc:
+  upload-dir: ${UPLOAD_DIR:upload}
 
 knife4j:
   enable: true

@@ -10,8 +10,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.Arrays;
-
+/**
+ * 控制器访问日志切面。
+ *
+ * @author NAPH130
+ */
 @Slf4j
 @Aspect
 @Component
@@ -25,9 +28,7 @@ public class LogAspect {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
-            log.info("Request: {} {} | Args: {}",
-                    request.getMethod(), request.getRequestURI(),
-                    Arrays.toString(joinPoint.getArgs()));
+            log.info("Request: {} {}", request.getMethod(), request.getRequestURI());
         }
 
         long start = System.currentTimeMillis();

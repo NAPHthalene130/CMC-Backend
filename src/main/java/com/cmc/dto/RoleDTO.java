@@ -10,5 +10,5 @@ public class RoleDTO {
     private String name;
 
     private String description;
-    private List<Long> functionIds;
+    private List<String> functionIds;
 }

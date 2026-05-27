@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("function")
+@TableName("`function`")
 public class Function {
     @TableId(type = IdType.AUTO)
     private Long id;

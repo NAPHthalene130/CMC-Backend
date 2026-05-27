@@ -32,8 +32,7 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         role.setName(dto.getName());
         role.setDescription(dto.getDescription());
         if (dto.getFunctionIds() != null && !dto.getFunctionIds().isEmpty()) {
-            role.setFunctions(dto.getFunctionIds().stream()
-                    .map(String::valueOf).collect(Collectors.joining(",")));
+            role.setFunctions(dto.getFunctionIds().stream().collect(Collectors.joining(",")));
         }
         save(role);
 
@@ -51,8 +50,7 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         role.setName(dto.getName());
         role.setDescription(dto.getDescription());
         if (dto.getFunctionIds() != null) {
-            role.setFunctions(dto.getFunctionIds().stream()
-                    .map(String::valueOf).collect(Collectors.joining(",")));
+            role.setFunctions(dto.getFunctionIds().stream().collect(Collectors.joining(",")));
         }
         updateById(role);
 

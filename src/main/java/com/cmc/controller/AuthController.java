@@ -6,6 +6,7 @@ import com.cmc.dto.LoginDTO;
 import com.cmc.dto.RegisterDTO;
 import com.cmc.entity.User;
 import com.cmc.service.UserService;
+import com.cmc.vo.AuthUserVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,9 +35,12 @@ public class AuthController {
     @PostMapping("/login")
     public R<Map<String, Object>> login(@Valid @RequestBody LoginDTO dto) {
         User user = userService.login(dto.getUsername(), dto.getPassword());
+        AuthUserVO authUser = userService.buildAuthUser(user);
         Map<String, Object> data = new HashMap<>();
         data.put("token", StpUtil.getTokenValue());
-        data.put("user", user);
+        data.put("userInfo", authUser);
+        data.put("role", authUser.getRole());
+        data.put("permissions", authUser.getPermissions());
         return R.ok(data);
     }
 
@@ -49,9 +53,14 @@ public class AuthController {
 
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/me")
-    public R<User> me() {
+    public R<Map<String, Object>> me() {
         long userId = StpUtil.getLoginIdAsLong();
-        User user = (User) StpUtil.getSession().get("user");
-        return R.ok(user);
+        User user = userService.getById(userId);
+        AuthUserVO authUser = userService.buildAuthUser(user);
+        Map<String, Object> data = new HashMap<>();
+        data.put("userInfo", authUser);
+        data.put("role", authUser.getRole());
+        data.put("permissions", authUser.getPermissions());
+        return R.ok(data);
     }
 }

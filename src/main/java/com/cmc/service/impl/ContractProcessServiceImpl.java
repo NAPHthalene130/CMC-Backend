@@ -8,10 +8,13 @@ import com.cmc.dto.ProcessDTO;
 import com.cmc.entity.ContractProcess;
 import com.cmc.entity.ContractState;
 import com.cmc.entity.User;
+import com.cmc.entity.Contract;
+import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractProcessMapper;
 import com.cmc.mapper.ContractStateMapper;
 import com.cmc.service.ContractProcessService;
 import com.cmc.service.LogService;
+import com.cmc.vo.ProcessTaskVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +29,20 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
         implements ContractProcessService {
 
     private final ContractStateMapper contractStateMapper;
+    private final ContractMapper contractMapper;
     private final LogService logService;
 
     @Override
     @Transactional
     public void assignContract(AssignDTO dto) {
+        if (dto.getCountersignUserIds() == null || dto.getCountersignUserIds().isEmpty()
+                || dto.getApproveUserIds() == null || dto.getApproveUserIds().isEmpty()
+                || dto.getSignUserIds() == null || dto.getSignUserIds().isEmpty()) {
+            throw new BusinessException("会签、审批、签订人员需全部指定");
+        }
+        if (lambdaQuery().eq(ContractProcess::getContractId, dto.getContractId()).count() > 0) {
+            throw new BusinessException("该合同已分配流程人员");
+        }
         List<ContractProcess> processes = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
@@ -76,12 +88,32 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     }
 
     @Override
-    public List<ContractProcess> getPendingTasks(Long userId, Integer type) {
+    public List<ProcessTaskVO> getPendingTasks(Long userId, Integer type) {
         return lambdaQuery()
                 .eq(ContractProcess::getUserId, userId)
                 .eq(type != null, ContractProcess::getType, type)
                 .eq(ContractProcess::getState, 0)
-                .list();
+                .list()
+                .stream()
+                .map(this::toTaskVO)
+                .toList();
+    }
+
+    private ProcessTaskVO toTaskVO(ContractProcess process) {
+        ProcessTaskVO vo = new ProcessTaskVO();
+        vo.setId(process.getId());
+        vo.setContractId(process.getContractId());
+        vo.setType(process.getType());
+        vo.setState(process.getState());
+        vo.setUserId(process.getUserId());
+        vo.setContent(process.getContent());
+        vo.setTime(process.getTime());
+        Contract contract = contractMapper.selectById(process.getContractId());
+        if (contract != null) {
+            vo.setContractNum(contract.getNum());
+            vo.setContractName(contract.getName());
+        }
+        return vo;
     }
 
     @Override
@@ -154,11 +186,17 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     }
 
     private boolean allApproved(Long contractId) {
-        return lambdaQuery()
+        long pendingCount = lambdaQuery()
                 .eq(ContractProcess::getContractId, contractId)
                 .eq(ContractProcess::getType, 2)
                 .eq(ContractProcess::getState, 0)
-                .count() == 0;
+                .count();
+        long rejectedCount = lambdaQuery()
+                .eq(ContractProcess::getContractId, contractId)
+                .eq(ContractProcess::getType, 2)
+                .eq(ContractProcess::getState, 2)
+                .count();
+        return pendingCount == 0 && rejectedCount == 0;
     }
 
     private void saveContractState(Long contractId, Integer type) {
