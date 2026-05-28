@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.AssignDTO;
+import com.cmc.dto.PendingTaskDTO;
 import com.cmc.dto.ProcessDTO;
 import com.cmc.entity.Contract;
 import com.cmc.entity.ContractProcess;
@@ -75,10 +76,22 @@ class ContractProcessServiceImplTest {
 
     @Test
     void getPendingTasks_shouldQueryByUserId() {
+        ContractProcess process = new ContractProcess();
+        process.setId(1L);
+        process.setContractId(100L);
+        process.setType(1);
+        process.setUserId(1L);
         when(contractProcessMapper.selectList(any(LambdaQueryWrapper.class)))
-                .thenReturn(List.of(new ContractProcess()));
+                .thenReturn(List.of(process));
 
-        List<ContractProcess> result = service.getPendingTasks(1L, 1);
+        Contract contract = new Contract();
+        contract.setId(100L);
+        contract.setState(1);
+        contract.setName("test");
+        contract.setNum("HT-1");
+        when(contractMapper.selectById(anyLong())).thenReturn(contract);
+
+        List<PendingTaskDTO> result = service.getPendingTasks(1L, 1);
         assertNotNull(result);
         assertEquals(1, result.size());
     }
@@ -88,7 +101,7 @@ class ContractProcessServiceImplTest {
         when(contractProcessMapper.selectList(any(LambdaQueryWrapper.class)))
                 .thenReturn(List.of());
 
-        List<ContractProcess> result = service.getPendingTasks(1L, null);
+        List<PendingTaskDTO> result = service.getPendingTasks(1L, null);
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
@@ -135,10 +148,15 @@ class ContractProcessServiceImplTest {
         process.setType(2);
         process.setState(0);
         process.setUserId(1L);
+        var contract = new Contract();
+        contract.setId(100L);
+        contract.setName("contract");
+        contract.setState(3);
 
         when(contractProcessMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(process);
         when(contractProcessMapper.updateById(any(ContractProcess.class))).thenReturn(1);
-        when(contractMapper.selectById(100L)).thenReturn(null);
+        when(contractMapper.selectById(100L)).thenReturn(contract);
+        when(contractMapper.updateById(any(Contract.class))).thenReturn(1);
         lenient().when(contractProcessMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
 
         ProcessDTO dto = new ProcessDTO();
@@ -158,10 +176,16 @@ class ContractProcessServiceImplTest {
         process.setType(3);
         process.setState(0);
         process.setUserId(1L);
+        var contract = new Contract();
+        contract.setId(100L);
+        contract.setName("contract");
+        contract.setState(4);
+        contract.setUserId(2L);
 
         when(contractProcessMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(process);
         when(contractProcessMapper.updateById(any(ContractProcess.class))).thenReturn(1);
-        when(contractMapper.selectById(100L)).thenReturn(null);
+        when(contractMapper.selectById(100L)).thenReturn(contract);
+        when(contractMapper.updateById(any(Contract.class))).thenReturn(1);
         lenient().when(contractProcessMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
 
         ProcessDTO dto = new ProcessDTO();
@@ -175,12 +199,17 @@ class ContractProcessServiceImplTest {
     @Test
     void assignContract_shouldCreateProcesses() {
         lenient().when(contractProcessMapper.insert(any(ContractProcess.class))).thenReturn(1);
-        when(contractMapper.selectById(100L)).thenReturn(new Contract());
+        var contract = new Contract();
+        contract.setId(100L);
+        contract.setName("contract");
+        contract.setState(1);
+        when(contractMapper.selectById(100L)).thenReturn(contract);
 
         AssignDTO dto = new AssignDTO();
         dto.setContractId(100L);
         dto.setCountersignUserIds(List.of(1L, 2L));
         dto.setApproveUserIds(List.of(3L));
+        dto.setSignUserIds(List.of(4L));
 
         assertDoesNotThrow(() -> service.assignContract(dto));
         verify(notificationService, atLeastOnce()).sendNotification(anyLong(), anyString(), anyString(), anyString(), anyLong());

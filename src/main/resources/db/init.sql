@@ -109,6 +109,7 @@ CREATE TABLE `contract` (
     `content` TEXT COMMENT '合同内容',
     `user_id` BIGINT NOT NULL COMMENT '起草人ID',
     `template_id` BIGINT DEFAULT NULL COMMENT '模板ID',
+    `state` INT NOT NULL DEFAULT 1 COMMENT '当前状态：1起草 2会签完成 3定稿完成 4审批完成 5签订完成',
     `deleted` INT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

@@ -8,7 +8,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.RegisterDTO;
 import com.cmc.dto.UserDTO;
+import com.cmc.entity.Role;
 import com.cmc.entity.User;
+import com.cmc.mapper.RoleMapper;
 import com.cmc.mapper.UserMapper;
 import com.cmc.service.LogService;
 import com.cmc.service.UserService;
@@ -16,11 +18,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     private final LogService logService;
+    private final RoleMapper roleMapper;
 
     @Override
     public void register(RegisterDTO dto) {
@@ -33,6 +38,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = new User();
         user.setUsername(dto.getUsername());
         user.setPassword(BCrypt.hashpw(dto.getPassword()));
+        user.setStatus(1);
         save(user);
     }
 
@@ -42,8 +48,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null || !BCrypt.checkpw(password, user.getPassword())) {
             throw new BusinessException("用户名或密码错误");
         }
+        if (user.getStatus() != null && user.getStatus() == 0) {
+            throw new BusinessException("用户已被禁用");
+        }
         StpUtil.login(user.getId());
         StpUtil.getSession().set("user", user);
+        StpUtil.getSession().set("username", user.getUsername());
         return user;
     }
 
@@ -59,11 +69,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUsername(dto.getUsername());
         user.setPassword(BCrypt.hashpw(dto.getPassword()));
         user.setRoleId(dto.getRoleId());
+        user.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
         save(user);
 
-        Long operatorId = StpUtil.getLoginIdAsLong();
-        User operator = getById(operatorId);
-        logService.saveLog(operatorId, operator.getUsername(), "新增用户：" + user.getUsername());
+        User operator = currentOperator();
+        logService.saveLog(operator.getId(), operator.getUsername(), "新增用户：" + user.getUsername());
+        fillRoleName(user);
         return user;
     }
 
@@ -79,11 +90,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (dto.getRoleId() != null) {
             user.setRoleId(dto.getRoleId());
         }
+        if (dto.getStatus() != null) {
+            user.setStatus(dto.getStatus());
+        }
         updateById(user);
 
-        Long operatorId = StpUtil.getLoginIdAsLong();
-        User operator = getById(operatorId);
-        logService.saveLog(operatorId, operator.getUsername(), "修改用户：" + user.getUsername());
+        User operator = currentOperator();
+        logService.saveLog(operator.getId(), operator.getUsername(), "修改用户：" + user.getUsername());
+        fillRoleName(user);
         return user;
     }
 
@@ -92,6 +106,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
                 .like(StringUtils.hasText(keyword), User::getUsername, keyword)
                 .orderByDesc(User::getCreateTime);
-        return page(new Page<>(page, pageSize), wrapper);
+        Page<User> result = page(new Page<>(page, pageSize), wrapper);
+        fillRoleNames(result.getRecords());
+        return result;
+    }
+
+    private void fillRoleNames(List<User> users) {
+        users.forEach(this::fillRoleName);
+    }
+
+    private void fillRoleName(User user) {
+        if (user.getRoleId() == null) {
+            user.setRoleName(null);
+            return;
+        }
+        Role role = roleMapper.selectById(user.getRoleId());
+        user.setRoleName(role == null ? null : role.getName());
+    }
+
+    private User currentOperator() {
+        Long operatorId = StpUtil.getLoginIdAsLong();
+        User operator = getById(operatorId);
+        if (operator == null) {
+            throw new BusinessException("当前用户不存在");
+        }
+        return operator;
     }
 }

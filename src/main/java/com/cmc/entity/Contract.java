@@ -17,6 +17,7 @@ public class Contract {
     private LocalDate endTime;
     private String content;
     private Long userId;
+    private Integer state;
 
     @TableLogic
     private Integer deleted;
@@ -26,4 +27,10 @@ public class Contract {
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    @TableField(exist = false)
+    private String draftUser;
+
+    @TableField(exist = false)
+    private String customerName;
 }

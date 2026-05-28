@@ -1,13 +1,11 @@
 package com.cmc.controller;
 
-import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.cmc.common.R;
 import com.cmc.dto.DashboardStats;
 import com.cmc.entity.Contract;
 import com.cmc.entity.ContractProcess;
-import com.cmc.entity.Customer;
-import com.cmc.entity.User;
 import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractProcessMapper;
 import com.cmc.mapper.ContractStateMapper;
@@ -20,9 +18,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.*;
 
-@SaCheckRole("ADMIN")
 @Tag(name = "仪表盘统计")
 @RestController
 @RequestMapping("/api/statistics")
@@ -41,24 +39,20 @@ public class StatisticsController {
         long userId = StpUtil.getLoginIdAsLong();
 
         long totalContracts = contractMapper.selectCount(null);
-        long pendingTasks = processMapper.selectCount(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ContractProcess>()
-                        .eq(ContractProcess::getUserId, userId)
-                        .eq(ContractProcess::getState, 0)
-        );
+        long pendingTasks = visiblePendingCount(userId);
         long totalUsers = userMapper.selectCount(null);
         long totalCustomers = customerMapper.selectCount(null);
 
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         long completedToday = processMapper.selectCount(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ContractProcess>()
+                new LambdaQueryWrapper<ContractProcess>()
                         .eq(ContractProcess::getUserId, userId)
                         .eq(ContractProcess::getState, 1)
                         .ge(ContractProcess::getTime, todayStart)
         );
 
         long expiringSoon = contractMapper.selectCount(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contract>()
+                new LambdaQueryWrapper<Contract>()
                         .le(Contract::getEndTime, LocalDate.now().plusDays(30))
                         .ge(Contract::getEndTime, LocalDate.now())
         );
@@ -78,11 +72,11 @@ public class StatisticsController {
     public R<List<Map<String, Object>>> contractStatus() {
         List<Map<String, Object>> rawData = contractStateMapper.countByType();
         Map<Integer, String> typeNames = new LinkedHashMap<>();
-        typeNames.put(1, "起草中");
-        typeNames.put(2, "会签完成");
-        typeNames.put(3, "定稿完成");
-        typeNames.put(4, "审批完成");
-        typeNames.put(5, "签订完成");
+        typeNames.put(1, "待会签");
+        typeNames.put(2, "待定稿");
+        typeNames.put(3, "待审批");
+        typeNames.put(4, "待签订");
+        typeNames.put(5, "已签订");
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map.Entry<Integer, String> entry : typeNames.entrySet()) {
@@ -105,15 +99,46 @@ public class StatisticsController {
     @Operation(summary = "获取月度合同趋势")
     @GetMapping("/monthly-trend")
     public R<List<Map<String, Object>>> monthlyTrend() {
-        List<Map<String, Object>> rawData = contractMapper.monthlyTrend();
-        return R.ok(rawData);
+        YearMonth currentMonth = YearMonth.now();
+        YearMonth startMonth = currentMonth.minusMonths(5);
+        LocalDateTime startTime = startMonth.atDay(1).atStartOfDay();
+
+        List<Contract> contracts = contractMapper.selectList(
+                new LambdaQueryWrapper<Contract>()
+                        .ge(Contract::getCreateTime, startTime)
+        );
+
+        Map<String, Long> countByMonth = new LinkedHashMap<>();
+        for (int i = 0; i < 6; i++) {
+            countByMonth.put(startMonth.plusMonths(i).toString(), 0L);
+        }
+
+        for (Contract contract : contracts) {
+            LocalDateTime createTime = contract.getCreateTime();
+            if (createTime == null) {
+                continue;
+            }
+            String month = YearMonth.from(createTime).toString();
+            if (countByMonth.containsKey(month)) {
+                countByMonth.put(month, countByMonth.get(month) + 1);
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : countByMonth.entrySet()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("month", entry.getKey());
+            item.put("count", entry.getValue());
+            result.add(item);
+        }
+        return R.ok(result);
     }
 
     @Operation(summary = "获取到期预警合同列表")
     @GetMapping("/expiring")
     public R<List<Contract>> expiring() {
         List<Contract> contracts = contractMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contract>()
+                new LambdaQueryWrapper<Contract>()
                         .le(Contract::getEndTime, LocalDate.now().plusDays(30))
                         .ge(Contract::getEndTime, LocalDate.now())
                         .orderByAsc(Contract::getEndTime)
@@ -125,11 +150,25 @@ public class StatisticsController {
     @GetMapping("/pending-count")
     public R<Long> pendingCount() {
         long userId = StpUtil.getLoginIdAsLong();
-        long count = processMapper.selectCount(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ContractProcess>()
+        return R.ok(visiblePendingCount(userId));
+    }
+
+    private long visiblePendingCount(long userId) {
+        List<ContractProcess> processes = processMapper.selectList(
+                new LambdaQueryWrapper<ContractProcess>()
                         .eq(ContractProcess::getUserId, userId)
                         .eq(ContractProcess::getState, 0)
         );
-        return R.ok(count);
+        return processes.stream().filter(process -> {
+            Contract contract = contractMapper.selectById(process.getContractId());
+            if (contract == null) {
+                return false;
+            }
+            Integer state = contract.getState();
+            Integer type = process.getType();
+            return (type == 1 && Objects.equals(state, 1))
+                    || (type == 2 && Objects.equals(state, 3))
+                    || (type == 3 && Objects.equals(state, 4));
+        }).count();
     }
 }

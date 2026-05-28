@@ -26,9 +26,10 @@ mybatis-plus:
 
 sa-token:
   token-name: Authorization
+  token-prefix: Bearer
   token-style: tik
+  is-read-header: true
   is-read-cookie: false
-  is-read-bearer: true
   timeout: 86400
 
 knife4j:

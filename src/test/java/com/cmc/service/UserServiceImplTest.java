@@ -7,6 +7,7 @@ import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.RegisterDTO;
 import com.cmc.dto.UserDTO;
 import com.cmc.entity.User;
+import com.cmc.mapper.RoleMapper;
 import com.cmc.mapper.UserMapper;
 import com.cmc.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.AfterEach;
@@ -32,6 +33,8 @@ class UserServiceImplTest {
     @Mock
     private UserMapper userMapper;
     @Mock
+    private RoleMapper roleMapper;
+    @Mock
     private LogService logService;
 
     private UserServiceImpl userService;
@@ -39,7 +42,7 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        userService = new UserServiceImpl(logService);
+        userService = new UserServiceImpl(logService, roleMapper);
         var field = ServiceImpl.class.getDeclaredField("baseMapper");
         field.setAccessible(true);
         field.set(userService, userMapper);
