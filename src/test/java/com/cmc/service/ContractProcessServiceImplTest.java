@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.AssignDTO;
+import com.cmc.dto.PendingTaskVO;
 import com.cmc.dto.ProcessDTO;
 import com.cmc.entity.Contract;
 import com.cmc.entity.ContractProcess;
@@ -13,6 +14,7 @@ import com.cmc.entity.User;
 import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractProcessMapper;
 import com.cmc.mapper.ContractStateMapper;
+import com.cmc.mapper.CustomerMapper;
 import com.cmc.service.impl.ContractProcessServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +45,8 @@ class ContractProcessServiceImplTest {
     @Mock
     private ContractMapper contractMapper;
     @Mock
+    private CustomerMapper customerMapper;
+    @Mock
     private LogService logService;
     @Mock
     private NotificationService notificationService;
@@ -53,7 +57,7 @@ class ContractProcessServiceImplTest {
     @BeforeEach
     void setUp() throws Exception {
         service = new ContractProcessServiceImpl(contractStateMapper, contractMapper,
-                logService, notificationService);
+                customerMapper, logService, notificationService);
         var field = ServiceImpl.class.getDeclaredField("baseMapper");
         field.setAccessible(true);
         field.set(service, contractProcessMapper);
@@ -75,10 +79,14 @@ class ContractProcessServiceImplTest {
 
     @Test
     void getPendingTasks_shouldQueryByUserId() {
+        ContractProcess p = new ContractProcess();
+        p.setContractId(1L);
         when(contractProcessMapper.selectList(any(LambdaQueryWrapper.class)))
-                .thenReturn(List.of(new ContractProcess()));
+                .thenReturn(List.of(p));
+        when(contractMapper.selectBatchIds(any()))
+                .thenReturn(List.of(new Contract()));
 
-        List<ContractProcess> result = service.getPendingTasks(1L, 1);
+        List<PendingTaskVO> result = service.getPendingTasks(1L, 1);
         assertNotNull(result);
         assertEquals(1, result.size());
     }
@@ -88,7 +96,7 @@ class ContractProcessServiceImplTest {
         when(contractProcessMapper.selectList(any(LambdaQueryWrapper.class)))
                 .thenReturn(List.of());
 
-        List<ContractProcess> result = service.getPendingTasks(1L, null);
+        List<PendingTaskVO> result = service.getPendingTasks(1L, null);
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }

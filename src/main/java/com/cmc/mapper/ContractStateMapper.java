@@ -3,6 +3,7 @@ package com.cmc.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.cmc.entity.ContractState;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
@@ -20,4 +21,13 @@ public interface ContractStateMapper extends BaseMapper<ContractState> {
             "WHERE cs.id IN (SELECT MAX(cs2.id) FROM contract_state cs2 GROUP BY cs2.contract_id) " +
             "GROUP BY cs.type")
     List<Map<String, Object>> countByType();
+
+    @Select("SELECT cs.type, COUNT(DISTINCT cs.contract_id) as count " +
+            "FROM contract_state cs " +
+            "INNER JOIN contract c ON c.id = cs.contract_id AND c.deleted = 0 " +
+            "WHERE (c.user_id = #{userId} " +
+            "   OR c.id IN (SELECT contract_id FROM contract_process WHERE user_id = #{userId})) " +
+            "AND cs.id IN (SELECT MAX(cs2.id) FROM contract_state cs2 GROUP BY cs2.contract_id) " +
+            "GROUP BY cs.type")
+    List<Map<String, Object>> countByTypeForUser(@Param("userId") Long userId);
 }

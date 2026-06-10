@@ -4,14 +4,17 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.AssignDTO;
+import com.cmc.dto.PendingTaskVO;
 import com.cmc.dto.ProcessDTO;
 import com.cmc.entity.Contract;
 import com.cmc.entity.ContractProcess;
 import com.cmc.entity.ContractState;
+import com.cmc.entity.Customer;
 import com.cmc.entity.User;
 import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractProcessMapper;
 import com.cmc.mapper.ContractStateMapper;
+import com.cmc.mapper.CustomerMapper;
 import com.cmc.service.ContractProcessService;
 import com.cmc.service.LogService;
 import com.cmc.service.NotificationService;
@@ -20,8 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author NAPH130
@@ -33,6 +36,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
 
     private final ContractStateMapper contractStateMapper;
     private final ContractMapper contractMapper;
+    private final CustomerMapper customerMapper;
     private final LogService logService;
     private final NotificationService notificationService;
 
@@ -97,12 +101,55 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     }
 
     @Override
-    public List<ContractProcess> getPendingTasks(Long userId, Integer type) {
-        return lambdaQuery()
+    public List<PendingTaskVO> getPendingTasks(Long userId, Integer type) {
+        List<ContractProcess> processes = lambdaQuery()
                 .eq(ContractProcess::getUserId, userId)
                 .eq(type != null, ContractProcess::getType, type)
                 .eq(ContractProcess::getState, 0)
                 .list();
+
+        if (processes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> contractIds = processes.stream()
+                .map(ContractProcess::getContractId)
+                .collect(Collectors.toSet());
+
+        Map<Long, Contract> contractMap = contractMapper.selectBatchIds(contractIds).stream()
+                .collect(Collectors.toMap(Contract::getId, c -> c));
+
+        Set<Long> customerIds = contractMap.values().stream()
+                .map(Contract::getCustomerId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> customerNameMap = customerIds.isEmpty() ? Collections.emptyMap()
+                : customerMapper.selectBatchIds(customerIds).stream()
+                        .collect(Collectors.toMap(Customer::getId, Customer::getName));
+
+        return processes.stream().map(p -> {
+            PendingTaskVO vo = new PendingTaskVO();
+            vo.setId(p.getId());
+            vo.setContractId(p.getContractId());
+            vo.setType(p.getType());
+            vo.setState(p.getState());
+            vo.setUserId(p.getUserId());
+            vo.setContent(p.getContent());
+            vo.setTime(p.getTime());
+
+            Contract contract = contractMap.get(p.getContractId());
+            if (contract != null) {
+                vo.setContractNum(contract.getNum());
+                vo.setContractName(contract.getName());
+                vo.setContractContent(contract.getContent());
+                vo.setCreateTime(contract.getCreateTime());
+                if (contract.getCustomerId() != null) {
+                    vo.setCustomerName(customerNameMap.getOrDefault(contract.getCustomerId(), null));
+                }
+            }
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override

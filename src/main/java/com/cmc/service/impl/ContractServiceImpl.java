@@ -22,8 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author NAPH130
@@ -119,18 +119,27 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
     }
 
     @Override
-    public Page<Contract> pageContracts(long page, long pageSize, String keyword) {
+    public Page<Contract> pageContracts(long page, long pageSize, String keyword, Long userId) {
         LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>();
         if (StringUtils.hasText(keyword)) {
             wrapper.and(w -> w.like(Contract::getName, keyword)
                     .or().like(Contract::getNum, keyword));
         }
+        if (userId != null) {
+            wrapper.and(w -> w
+                    .eq(Contract::getUserId, userId)
+                    .or()
+                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = " + userId));
+        }
         wrapper.orderByDesc(Contract::getCreateTime);
-        return page(new Page<>(page, pageSize), wrapper);
+        Page<Contract> result = page(new Page<>(page, pageSize), wrapper);
+
+        fillStates(result.getRecords());
+        return result;
     }
 
     @Override
-    public Page<Contract> pageByState(long page, long pageSize, Integer stateType, String keyword) {
+    public Page<Contract> pageByState(long page, long pageSize, Integer stateType, String keyword, Long userId) {
         LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>()
                 .orderByDesc(Contract::getCreateTime);
         if (stateType != null) {
@@ -140,6 +149,39 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
             wrapper.and(w -> w.like(Contract::getName, keyword)
                     .or().like(Contract::getNum, keyword));
         }
-        return page(new Page<>(page, pageSize), wrapper);
+        if (userId != null) {
+            wrapper.and(w -> w
+                    .eq(Contract::getUserId, userId)
+                    .or()
+                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = " + userId));
+        }
+        Page<Contract> result = page(new Page<>(page, pageSize), wrapper);
+
+        fillStates(result.getRecords());
+        return result;
+    }
+
+    /**
+     * 批量查询 contract_state 表，取每个合同的最新 type 作为当前状态
+     */
+    private void fillStates(List<Contract> contracts) {
+        if (contracts == null || contracts.isEmpty()) {
+            return;
+        }
+        Set<Long> contractIds = contracts.stream()
+                .map(Contract::getId)
+                .collect(Collectors.toSet());
+
+        List<ContractState> states = contractStateMapper.selectList(
+                new LambdaQueryWrapper<ContractState>()
+                        .in(ContractState::getContractId, contractIds));
+
+        Map<Long, Integer> stateMap = states.stream()
+                .collect(Collectors.groupingBy(ContractState::getContractId,
+                        Collectors.collectingAndThen(
+                                Collectors.maxBy(Comparator.comparingInt(ContractState::getType)),
+                                opt -> opt.map(ContractState::getType).orElse(null))));
+
+        contracts.forEach(c -> c.setState(stateMap.get(c.getId())));
     }
 }

@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 /**
  * @author NAPH130
  */
-@SaCheckRole("ADMIN")
 @Tag(name = "合同模板管理")
 @RestController
 @RequestMapping("/api/templates")
@@ -45,6 +44,7 @@ public class ContractTemplateController {
         return R.ok(templateService.getById(id));
     }
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "新增模板")
     @PostMapping
     public R<ContractTemplate> add(@RequestBody ContractTemplate template) {
@@ -52,6 +52,7 @@ public class ContractTemplateController {
         return R.ok(template);
     }
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "修改模板")
     @PutMapping("/{id}")
     public R<ContractTemplate> update(@PathVariable Long id, @RequestBody ContractTemplate template) {
@@ -60,6 +61,7 @@ public class ContractTemplateController {
         return R.ok(template);
     }
 
+    @SaCheckRole("ADMIN")
     @Operation(summary = "删除模板")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {

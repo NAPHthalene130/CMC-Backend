@@ -4,8 +4,8 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.cmc.common.R;
 import com.cmc.dto.AssignDTO;
+import com.cmc.dto.PendingTaskVO;
 import com.cmc.dto.ProcessDTO;
-import com.cmc.entity.ContractProcess;
 import com.cmc.service.ContractProcessService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,7 +33,7 @@ public class ContractProcessController {
 
     @Operation(summary = "获取我的待办任务")
     @GetMapping("/pending")
-    public R<List<ContractProcess>> pending(@RequestParam(required = false) Integer type) {
+    public R<List<PendingTaskVO>> pending(@RequestParam(required = false) Integer type) {
         long userId = StpUtil.getLoginIdAsLong();
         return R.ok(processService.getPendingTasks(userId, type));
     }

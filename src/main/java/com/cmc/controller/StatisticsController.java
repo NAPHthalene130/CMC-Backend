@@ -33,19 +33,56 @@ public class StatisticsController {
     private final UserMapper userMapper;
     private final CustomerMapper customerMapper;
 
+    /** 判断当前用户是否为管理员（兼容页面刷新后 session 中 user 为 null 的场景） */
+    private boolean isAdmin() {
+        long userId = StpUtil.getLoginIdAsLong();
+        User sessionUser = (User) StpUtil.getSession().get("user");
+        if (sessionUser != null && sessionUser.getRoleId() != null) {
+            return sessionUser.getRoleId() == 1;
+        }
+        User dbUser = userMapper.selectById(userId);
+        return dbUser != null && dbUser.getRoleId() != null && dbUser.getRoleId() == 1;
+    }
+
     @Operation(summary = "获取仪表盘统计数据")
     @GetMapping("/dashboard")
     public R<DashboardStats> dashboard() {
         long userId = StpUtil.getLoginIdAsLong();
+        boolean admin = isAdmin();
 
-        long totalContracts = contractMapper.selectCount(null);
+        long totalContracts;
+        long expiringSoon;
+        if (admin) {
+            totalContracts = contractMapper.selectCount(null);
+            expiringSoon = contractMapper.selectCount(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contract>()
+                            .le(Contract::getEndTime, LocalDate.now().plusDays(30))
+                            .ge(Contract::getEndTime, LocalDate.now())
+            );
+        } else {
+            totalContracts = contractMapper.selectCount(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contract>()
+                            .and(w -> w.eq(Contract::getUserId, userId)
+                                    .or()
+                                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = " + userId))
+            );
+            expiringSoon = contractMapper.selectCount(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contract>()
+                            .and(w -> w.eq(Contract::getUserId, userId)
+                                    .or()
+                                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = " + userId))
+                            .le(Contract::getEndTime, LocalDate.now().plusDays(30))
+                            .ge(Contract::getEndTime, LocalDate.now())
+            );
+        }
+
         long pendingTasks = processMapper.selectCount(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ContractProcess>()
                         .eq(ContractProcess::getUserId, userId)
                         .eq(ContractProcess::getState, 0)
         );
-        long totalUsers = userMapper.selectCount(null);
-        long totalCustomers = customerMapper.selectCount(null);
+        long totalUsers = admin ? userMapper.selectCount(null) : 0;
+        long totalCustomers = admin ? customerMapper.selectCount(null) : 0;
 
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         long completedToday = processMapper.selectCount(
@@ -53,12 +90,6 @@ public class StatisticsController {
                         .eq(ContractProcess::getUserId, userId)
                         .eq(ContractProcess::getState, 1)
                         .ge(ContractProcess::getTime, todayStart)
-        );
-
-        long expiringSoon = contractMapper.selectCount(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contract>()
-                        .le(Contract::getEndTime, LocalDate.now().plusDays(30))
-                        .ge(Contract::getEndTime, LocalDate.now())
         );
 
         DashboardStats stats = new DashboardStats();
@@ -74,7 +105,12 @@ public class StatisticsController {
     @Operation(summary = "获取合同状态分布")
     @GetMapping("/contract-status")
     public R<List<Map<String, Object>>> contractStatus() {
-        List<Map<String, Object>> rawData = contractStateMapper.countByType();
+        long userId = StpUtil.getLoginIdAsLong();
+        boolean admin = isAdmin();
+
+        List<Map<String, Object>> rawData = admin
+                ? contractStateMapper.countByType()
+                : contractStateMapper.countByTypeForUser(userId);
         Map<Integer, String> typeNames = new LinkedHashMap<>();
         typeNames.put(1, "起草中");
         typeNames.put(2, "会签完成");
@@ -110,12 +146,20 @@ public class StatisticsController {
     @Operation(summary = "获取到期预警合同列表")
     @GetMapping("/expiring")
     public R<List<Contract>> expiring() {
-        List<Contract> contracts = contractMapper.selectList(
+        long userId = StpUtil.getLoginIdAsLong();
+        boolean admin = isAdmin();
+
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contract> wrapper =
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Contract>()
                         .le(Contract::getEndTime, LocalDate.now().plusDays(30))
                         .ge(Contract::getEndTime, LocalDate.now())
-                        .orderByAsc(Contract::getEndTime)
-        );
+                        .orderByAsc(Contract::getEndTime);
+        if (!admin) {
+            wrapper.and(w -> w.eq(Contract::getUserId, userId)
+                    .or()
+                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = " + userId));
+        }
+        List<Contract> contracts = contractMapper.selectList(wrapper);
         return R.ok(contracts);
     }
 

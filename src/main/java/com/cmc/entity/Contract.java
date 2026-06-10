@@ -18,6 +18,10 @@ public class Contract {
     private String content;
     private Long userId;
 
+    /** 当前状态（来自 contract_state 表，非数据库字段） */
+    @TableField(exist = false)
+    private Integer state;
+
     @TableLogic
     private Integer deleted;
 
