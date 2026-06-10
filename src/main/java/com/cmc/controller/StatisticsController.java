@@ -1,6 +1,5 @@
 package com.cmc.controller;
 
-import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.cmc.common.R;
 import com.cmc.dto.DashboardStats;
@@ -22,7 +21,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
-@SaCheckRole("ADMIN")
 @Tag(name = "仪表盘统计")
 @RestController
 @RequestMapping("/api/statistics")
