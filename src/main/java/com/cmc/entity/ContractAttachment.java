@@ -13,5 +13,10 @@ public class ContractAttachment {
     private String fileName;
     private String path;
     private String type;
+    private Long fileSize;
     private LocalDateTime uploadTime;
+    private Integer chunkIndex;
+    private Integer chunkTotal;
+    private String fileMd5;
+    private Integer status;
 }

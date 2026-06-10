@@ -1,5 +1,6 @@
 package com.cmc.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -10,8 +11,14 @@ public class User {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String username;
+    @JsonIgnore
     private String password;
     private Long roleId;
+    private Integer status;
+    private String avatar;
+    private String email;
+    private String phone;
+    private Integer mustChangePassword;
 
     @TableLogic
     private Integer deleted;
@@ -21,4 +28,7 @@ public class User {
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    @TableField(exist = false)
+    private String roleName;
 }

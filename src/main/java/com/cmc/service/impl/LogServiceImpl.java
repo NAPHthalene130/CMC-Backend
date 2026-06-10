@@ -29,6 +29,7 @@ public class LogServiceImpl extends ServiceImpl<LogMapper, Log> implements LogSe
         log.setUsername(username);
         log.setContent(content);
         log.setTime(LocalDateTime.now());
+        log.setType("OPERATION");
         save(log);
     }
 }

@@ -13,6 +13,7 @@ import com.cmc.service.CustomerService;
 import com.cmc.service.LogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.UUID;
@@ -24,6 +25,7 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
     private final LogService logService;
 
     @Override
+    @Transactional
     public Customer addCustomer(CustomerDTO dto) {
         Customer customer = new Customer();
         customer.setNum("KH-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
@@ -37,11 +39,14 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
         save(customer);
 
         User operator = (User) StpUtil.getSession().get("user");
-        logService.saveLog(operator.getId(), operator.getUsername(), "新增客户：" + customer.getName());
+        if (operator != null) {
+            logService.saveLog(operator.getId(), operator.getUsername(), "新增客户：" + customer.getName());
+        }
         return customer;
     }
 
     @Override
+    @Transactional
     public Customer updateCustomer(Long id, CustomerDTO dto) {
         Customer customer = getById(id);
         if (customer == null) {
@@ -57,7 +62,9 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
         updateById(customer);
 
         User operator = (User) StpUtil.getSession().get("user");
-        logService.saveLog(operator.getId(), operator.getUsername(), "修改客户：" + customer.getName());
+        if (operator != null) {
+            logService.saveLog(operator.getId(), operator.getUsername(), "修改客户：" + customer.getName());
+        }
         return customer;
     }
 

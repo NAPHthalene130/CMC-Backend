@@ -9,6 +9,10 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
+app:
+  upload:
+    dir: upload
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
@@ -22,8 +26,6 @@ mybatis-plus:
 
 sa-token:
   token-name: Authorization
-  token-style: tik
-  is-read-cookie: false
   timeout: 86400
 
 knife4j:

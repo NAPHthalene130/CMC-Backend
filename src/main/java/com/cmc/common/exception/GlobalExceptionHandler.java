@@ -2,6 +2,7 @@ package com.cmc.common.exception;
 
 import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import com.cmc.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -25,6 +26,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotPermissionException.class)
     public R<Void> handleNotPermission(NotPermissionException e) {
         return R.fail(403, "权限不足");
+    }
+
+    @ExceptionHandler(NotRoleException.class)
+    public R<Void> handleNotRole(NotRoleException e) {
+        return R.fail(403, "权限不足，需要管理员角色");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

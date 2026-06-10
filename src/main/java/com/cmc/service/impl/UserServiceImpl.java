@@ -14,6 +14,7 @@ import com.cmc.service.LogService;
 import com.cmc.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -48,6 +49,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
+    @Transactional
     public User addUser(UserDTO dto) {
         if (!dto.getPassword().equals(dto.getConfirmPassword())) {
             throw new BusinessException("两次输入的密码不一致");
@@ -68,6 +70,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
+    @Transactional
     public User updateUser(Long id, UserDTO dto) {
         User user = getById(id);
         if (user == null) {

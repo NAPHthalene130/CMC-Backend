@@ -1,5 +1,6 @@
 package com.cmc.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cmc.common.R;
 import com.cmc.common.PageResult;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.List;
 
+@SaCheckRole("ADMIN")
 @Tag(name = "日志管理")
 @RestController
 @RequestMapping("/api/logs")
