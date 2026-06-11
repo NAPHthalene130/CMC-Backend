@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.cmc.common.Constants;
 import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.ContractDTO;
 import com.cmc.entity.Contract;
@@ -52,7 +53,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
 
         ContractState state = new ContractState();
         state.setContractId(contract.getId());
-        state.setType(1);
+        state.setType(Constants.CONTRACT_STATE_DRAFT);
         state.setTime(LocalDateTime.now());
         contractStateMapper.insert(state);
 
@@ -64,7 +65,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
             logService.saveLog(operator.getId(), operator.getUsername(), "起草合同：" + contract.getName());
 
             List<User> admins = userMapper.selectList(
-                    new LambdaQueryWrapper<User>().eq(User::getRoleId, 1));
+                    new LambdaQueryWrapper<User>().eq(User::getRoleId, Constants.ROLE_ADMIN_ID));
             for (User admin : admins) {
                 notificationService.sendNotification(admin.getId(),
                         "新合同待分配",
@@ -97,12 +98,12 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         if (currentState == null) {
             throw new BusinessException("合同状态异常");
         }
-        if (currentState != 2) {
-            if (currentState == 1) {
+        if (!currentState.equals(Constants.CONTRACT_STATE_COUNTERSIGNED)) {
+            if (currentState.equals(Constants.CONTRACT_STATE_DRAFT)) {
                 List<com.cmc.entity.ContractProcess> processes = new ArrayList<>(
                         processService.lambdaQuery()
                                 .eq(com.cmc.entity.ContractProcess::getContractId, id)
-                                .eq(com.cmc.entity.ContractProcess::getType, 1)
+                                .eq(com.cmc.entity.ContractProcess::getType, Constants.PROCESS_TYPE_COUNTERSIGN)
                                 .list());
                 boolean hasCountersigners = !processes.isEmpty();
                 if (hasCountersigners) {
@@ -124,7 +125,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
 
         ContractState state = new ContractState();
         state.setContractId(contract.getId());
-        state.setType(3);
+        state.setType(Constants.CONTRACT_STATE_FINALIZED);
         state.setTime(LocalDateTime.now());
         contractStateMapper.insert(state);
 
@@ -138,7 +139,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         }
 
         List<User> admins = userMapper.selectList(
-                new LambdaQueryWrapper<User>().eq(User::getRoleId, 1));
+                new LambdaQueryWrapper<User>().eq(User::getRoleId, Constants.ROLE_ADMIN_ID));
         for (User admin : admins) {
             notificationService.sendNotification(admin.getId(),
                     "合同已定稿待审批",
@@ -160,7 +161,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
             wrapper.and(w -> w
                     .eq(Contract::getUserId, userId)
                     .or()
-                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = " + userId));
+                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = {0}", userId));
         }
         wrapper.orderByDesc(Contract::getCreateTime);
         Page<Contract> result = page(new Page<>(page, pageSize), wrapper);
@@ -174,7 +175,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>()
                 .orderByDesc(Contract::getCreateTime);
         if (stateType != null) {
-            wrapper.exists("SELECT 1 FROM contract_state cs WHERE cs.contract_id = contract.id AND cs.type = " + stateType);
+            wrapper.exists("SELECT 1 FROM contract_state cs WHERE cs.contract_id = contract.id AND cs.type = {0}", stateType);
         }
         if (StringUtils.hasText(keyword)) {
             wrapper.and(w -> w.like(Contract::getName, keyword)
@@ -184,7 +185,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
             wrapper.and(w -> w
                     .eq(Contract::getUserId, userId)
                     .or()
-                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = " + userId));
+                    .exists("SELECT 1 FROM contract_process cp WHERE cp.contract_id = contract.id AND cp.user_id = {0}", userId));
         }
         Page<Contract> result = page(new Page<>(page, pageSize), wrapper);
 

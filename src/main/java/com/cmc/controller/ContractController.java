@@ -3,14 +3,15 @@ package com.cmc.controller;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.cmc.common.Constants;
 import com.cmc.common.R;
 import com.cmc.common.PageResult;
 import com.cmc.dto.ContractDTO;
 import com.cmc.entity.Contract;
 import com.cmc.entity.User;
-import com.cmc.mapper.UserMapper;
 import com.cmc.service.ContractProcessService;
 import com.cmc.service.ContractService;
+import com.cmc.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,17 +25,18 @@ import org.springframework.web.bind.annotation.*;
 public class ContractController {
 
     private final ContractService contractService;
-    private final UserMapper userMapper;
+    private final UserService userService;
     private final ContractProcessService processService;
 
     private boolean isAdmin() {
         long userId = StpUtil.getLoginIdAsLong();
         User sessionUser = (User) StpUtil.getSession().get("user");
         if (sessionUser != null && sessionUser.getRoleId() != null) {
-            return sessionUser.getRoleId() == 1;
+            return Constants.ROLE_ADMIN_ID.equals(sessionUser.getRoleId());
         }
-        User dbUser = userMapper.selectById(userId);
-        return dbUser != null && dbUser.getRoleId() != null && dbUser.getRoleId() == 1;
+        User dbUser = userService.getById(userId);
+        return dbUser != null && dbUser.getRoleId() != null
+                && Constants.ROLE_ADMIN_ID.equals(dbUser.getRoleId());
     }
 
     @Operation(summary = "起草合同")

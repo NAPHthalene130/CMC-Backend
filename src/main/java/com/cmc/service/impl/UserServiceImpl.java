@@ -77,6 +77,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException("用户不存在");
         }
         if (StringUtils.hasText(dto.getPassword())) {
+            if (!dto.getPassword().equals(dto.getConfirmPassword())) {
+                throw new BusinessException("两次输入的密码不一致");
+            }
             user.setPassword(BCrypt.hashpw(dto.getPassword()));
         }
         if (dto.getRoleId() != null) {

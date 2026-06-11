@@ -15,6 +15,7 @@ import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractProcessMapper;
 import com.cmc.mapper.ContractStateMapper;
 import com.cmc.mapper.CustomerMapper;
+import com.cmc.mapper.UserMapper;
 import com.cmc.service.impl.ContractProcessServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,8 @@ class ContractProcessServiceImplTest {
     @Mock
     private CustomerMapper customerMapper;
     @Mock
+    private UserMapper userMapper;
+    @Mock
     private LogService logService;
     @Mock
     private NotificationService notificationService;
@@ -57,7 +60,7 @@ class ContractProcessServiceImplTest {
     @BeforeEach
     void setUp() throws Exception {
         service = new ContractProcessServiceImpl(contractStateMapper, contractMapper,
-                customerMapper, logService, notificationService);
+                customerMapper, userMapper, logService, notificationService);
         var field = ServiceImpl.class.getDeclaredField("baseMapper");
         field.setAccessible(true);
         field.set(service, contractProcessMapper);

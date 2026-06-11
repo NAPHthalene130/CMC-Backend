@@ -2,13 +2,13 @@ package com.cmc.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.cmc.common.R;
+import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.LoginDTO;
 import com.cmc.dto.RegisterDTO;
-import com.cmc.entity.LoginLog;
 import com.cmc.entity.Role;
 import com.cmc.entity.User;
-import com.cmc.mapper.LoginLogMapper;
-import com.cmc.mapper.RoleMapper;
+import com.cmc.service.LogService;
+import com.cmc.service.RoleService;
 import com.cmc.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +17,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,8 +27,8 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
-    private final LoginLogMapper loginLogMapper;
-    private final RoleMapper roleMapper;
+    private final LogService logService;
+    private final RoleService roleService;
 
     @Operation(summary = "用户注册")
     @PostMapping("/register")
@@ -44,18 +43,23 @@ public class AuthController {
         User user;
         try {
             user = userService.login(dto.getUsername(), dto.getPassword());
-        } catch (Exception e) {
-            recordLoginLog(null, dto.getUsername(), request, 0, e.getMessage());
+        } catch (BusinessException e) {
+            logService.saveLoginLog(null, dto.getUsername(), getClientIp(request),
+                    request.getHeader("User-Agent"), 0, e.getMessage());
             throw e;
         }
 
-        recordLoginLog(user.getId(), user.getUsername(), request, 1, "登录成功");
+        logService.saveLoginLog(user.getId(), user.getUsername(), getClientIp(request),
+                request.getHeader("User-Agent"), 1, "登录成功");
+
+        // 清除敏感字段再返回
+        user.setPassword(null);
         Map<String, Object> data = new HashMap<>();
         data.put("token", StpUtil.getTokenValue());
         data.put("user", user);
 
         if (user.getRoleId() != null) {
-            Role role = roleMapper.selectById(user.getRoleId());
+            Role role = roleService.getById(user.getRoleId());
             data.put("role", role != null ? role.getName() : "");
         } else {
             data.put("role", "");
@@ -78,10 +82,12 @@ public class AuthController {
         if (user == null) {
             return R.fail(401, "用户不存在");
         }
+        // 清除敏感字段再返回
+        user.setPassword(null);
         Map<String, Object> data = new HashMap<>();
         data.put("userInfo", user);
         if (user.getRoleId() != null) {
-            Role role = roleMapper.selectById(user.getRoleId());
+            Role role = roleService.getById(user.getRoleId());
             data.put("role", role != null ? role.getName() : "");
             data.put("permissions", role != null ? role.getFunctions() : "");
         } else {
@@ -89,18 +95,6 @@ public class AuthController {
             data.put("permissions", "");
         }
         return R.ok(data);
-    }
-
-    private void recordLoginLog(Long userId, String username, HttpServletRequest request, int status, String msg) {
-        LoginLog log = new LoginLog();
-        log.setUserId(userId);
-        log.setUsername(username);
-        log.setIp(getClientIp(request));
-        log.setUserAgent(request.getHeader("User-Agent"));
-        log.setStatus(status);
-        log.setMsg(msg);
-        log.setTime(LocalDateTime.now());
-        loginLogMapper.insert(log);
     }
 
     private String getClientIp(HttpServletRequest request) {
