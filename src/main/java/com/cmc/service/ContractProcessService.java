@@ -14,4 +14,7 @@ public interface ContractProcessService extends IService<ContractProcess> {
     void countersign(Long userId, ProcessDTO dto);
     void approve(Long userId, ProcessDTO dto);
     void sign(Long userId, ProcessDTO dto);
+    List<PendingTaskVO> getContractProcesses(Long contractId);
+    void redraft(Long userId, Long contractId);
+    Integer getCurrentState(Long contractId);
 }

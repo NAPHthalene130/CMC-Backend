@@ -1,20 +1,14 @@
 package com.cmc.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.AssignDTO;
 import com.cmc.dto.PendingTaskVO;
 import com.cmc.dto.ProcessDTO;
-import com.cmc.entity.Contract;
-import com.cmc.entity.ContractProcess;
-import com.cmc.entity.ContractState;
-import com.cmc.entity.Customer;
-import com.cmc.entity.User;
-import com.cmc.mapper.ContractMapper;
-import com.cmc.mapper.ContractProcessMapper;
-import com.cmc.mapper.ContractStateMapper;
-import com.cmc.mapper.CustomerMapper;
+import com.cmc.entity.*;
+import com.cmc.mapper.*;
 import com.cmc.service.ContractProcessService;
 import com.cmc.service.LogService;
 import com.cmc.service.NotificationService;
@@ -26,9 +20,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * @author NAPH130
- */
 @Service
 @RequiredArgsConstructor
 public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMapper, ContractProcess>
@@ -37,8 +28,43 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     private final ContractStateMapper contractStateMapper;
     private final ContractMapper contractMapper;
     private final CustomerMapper customerMapper;
+    private final UserMapper userMapper;
     private final LogService logService;
     private final NotificationService notificationService;
+
+    @Override
+    public Integer getCurrentState(Long contractId) {
+        List<ContractState> states = contractStateMapper.selectList(
+                new LambdaQueryWrapper<ContractState>()
+                        .eq(ContractState::getContractId, contractId));
+        if (states.isEmpty()) {
+            return null;
+        }
+        return states.stream()
+                .max(Comparator.comparingInt(ContractState::getType))
+                .map(ContractState::getType)
+                .orElse(null);
+    }
+
+    private void requireState(Long contractId, Integer expectedState, String actionName) {
+        Integer current = getCurrentState(contractId);
+        if (current == null) {
+            throw new BusinessException("合同状态异常，无法" + actionName);
+        }
+        if (!current.equals(expectedState)) {
+            String[] names = {null, "起草", "会签完成", "定稿完成", "审批完成", "签订完成"};
+            String expected = expectedState < names.length ? names[expectedState] : "状态" + expectedState;
+            String actual = current < names.length ? names[current] : "状态" + current;
+            throw new BusinessException("合同当前状态为「" + actual + "」，需先完成「" + expected + "」才能" + actionName);
+        }
+    }
+
+    private boolean hasCountersigners(Long contractId) {
+        return lambdaQuery()
+                .eq(ContractProcess::getContractId, contractId)
+                .eq(ContractProcess::getType, 1)
+                .count() > 0;
+    }
 
     @Override
     @Transactional
@@ -112,6 +138,25 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
             return Collections.emptyList();
         }
 
+        return buildTaskVOs(processes);
+    }
+
+    @Override
+    public List<PendingTaskVO> getContractProcesses(Long contractId) {
+        List<ContractProcess> processes = lambdaQuery()
+                .eq(ContractProcess::getContractId, contractId)
+                .orderByAsc(ContractProcess::getType)
+                .orderByAsc(ContractProcess::getId)
+                .list();
+
+        if (processes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return buildTaskVOs(processes);
+    }
+
+    private List<PendingTaskVO> buildTaskVOs(List<ContractProcess> processes) {
         Set<Long> contractIds = processes.stream()
                 .map(ContractProcess::getContractId)
                 .collect(Collectors.toSet());
@@ -128,6 +173,15 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
                 : customerMapper.selectBatchIds(customerIds).stream()
                         .collect(Collectors.toMap(Customer::getId, Customer::getName));
 
+        Set<Long> userIds = processes.stream()
+                .map(ContractProcess::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> userNameMap = userIds.isEmpty() ? Collections.emptyMap()
+                : userMapper.selectBatchIds(userIds).stream()
+                        .collect(Collectors.toMap(User::getId, User::getUsername));
+
         return processes.stream().map(p -> {
             PendingTaskVO vo = new PendingTaskVO();
             vo.setId(p.getId());
@@ -137,6 +191,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
             vo.setUserId(p.getUserId());
             vo.setContent(p.getContent());
             vo.setTime(p.getTime());
+            vo.setUsername(userNameMap.get(p.getUserId()));
 
             Contract contract = contractMap.get(p.getContractId());
             if (contract != null) {
@@ -155,6 +210,8 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     @Override
     @Transactional
     public void countersign(Long userId, ProcessDTO dto) {
+        requireState(dto.getContractId(), 1, "会签");
+
         ContractProcess process = getTaskOrFail(userId, dto.getContractId(), 1);
         process.setState(1);
         process.setContent(dto.getContent());
@@ -180,6 +237,8 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     @Override
     @Transactional
     public void approve(Long userId, ProcessDTO dto) {
+        requireState(dto.getContractId(), 3, "审批");
+
         ContractProcess process = getTaskOrFail(userId, dto.getContractId(), 2);
         process.setState(dto.getApproved() != null && dto.getApproved() ? 1 : 2);
         process.setContent(dto.getContent());
@@ -201,7 +260,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
             if (contract != null) {
                 notificationService.sendNotification(contract.getUserId(),
                         "审批被拒绝",
-                        "合同「" + contractName + "」审批未通过，请查看审批意见并修改",
+                        "合同「" + contractName + "」审批未通过，请查看审批意见并修改后重新提交",
                         "CONTRACT", dto.getContractId());
             }
         }
@@ -212,6 +271,8 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
     @Override
     @Transactional
     public void sign(Long userId, ProcessDTO dto) {
+        requireState(dto.getContractId(), 4, "签订");
+
         ContractProcess process = getTaskOrFail(userId, dto.getContractId(), 3);
         process.setState(1);
         process.setContent(dto.getContent());
@@ -232,6 +293,62 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
         }
 
         logService.saveLog(userId, getUsername(userId), "签订合同：" + dto.getContractId());
+    }
+
+    @Override
+    @Transactional
+    public void redraft(Long userId, Long contractId) {
+        Contract contract = contractMapper.selectById(contractId);
+        if (contract == null) {
+            throw new BusinessException("合同不存在");
+        }
+
+        long rejectedCount = lambdaQuery()
+                .eq(ContractProcess::getContractId, contractId)
+                .eq(ContractProcess::getType, 2)
+                .eq(ContractProcess::getState, 2)
+                .count();
+        if (rejectedCount == 0) {
+            throw new BusinessException("当前合同未被拒绝，无需重新起草");
+        }
+
+        lambdaUpdate()
+                .eq(ContractProcess::getContractId, contractId)
+                .eq(ContractProcess::getType, 2)
+                .eq(ContractProcess::getState, 2)
+                .remove();
+
+        lambdaUpdate()
+                .eq(ContractProcess::getContractId, contractId)
+                .eq(ContractProcess::getType, 2)
+                .eq(ContractProcess::getState, 1)
+                .remove();
+
+        List<ContractState> states = contractStateMapper.selectList(
+                new LambdaQueryWrapper<ContractState>()
+                        .eq(ContractState::getContractId, contractId));
+        for (ContractState s : states) {
+            if (s.getType() >= 3) {
+                contractStateMapper.deleteById(s.getId());
+            }
+        }
+
+        saveContractState(contractId, 1);
+
+        List<User> admins = userMapper.selectList(
+                new LambdaQueryWrapper<User>().eq(User::getRoleId, 1));
+        for (User admin : admins) {
+            notificationService.sendNotification(admin.getId(),
+                    "合同重新提交",
+                    "合同「" + contract.getName() + "」已被重新提交，请重新分配审批人员并进入审批流程",
+                    "CONTRACT", contractId);
+        }
+
+        User operator = (User) StpUtil.getSession().get("user");
+        if (operator != null) {
+            logService.saveLog(operator.getId(), operator.getUsername(),
+                    "重新起草合同：" + contract.getName());
+        }
     }
 
     private ContractProcess getTaskOrFail(Long userId, Long contractId, Integer type) {
@@ -269,7 +386,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
                 .count() == 0;
     }
 
-    private void saveContractState(Long contractId, Integer type) {
+    void saveContractState(Long contractId, Integer type) {
         ContractState state = new ContractState();
         state.setContractId(contractId);
         state.setType(type);

@@ -9,6 +9,7 @@ import com.cmc.dto.ContractDTO;
 import com.cmc.entity.Contract;
 import com.cmc.entity.User;
 import com.cmc.mapper.UserMapper;
+import com.cmc.service.ContractProcessService;
 import com.cmc.service.ContractService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,8 +25,8 @@ public class ContractController {
 
     private final ContractService contractService;
     private final UserMapper userMapper;
+    private final ContractProcessService processService;
 
-    /** 判断当前用户是否为管理员（兼容页面刷新后 session 中 user 为 null 的场景） */
     private boolean isAdmin() {
         long userId = StpUtil.getLoginIdAsLong();
         User sessionUser = (User) StpUtil.getSession().get("user");
@@ -46,7 +47,16 @@ public class ContractController {
     @Operation(summary = "定稿合同")
     @PutMapping("/{id}/finalize")
     public R<Contract> finalize(@PathVariable Long id, @Valid @RequestBody ContractDTO dto) {
-        return R.ok(contractService.finalize(id, dto));
+        long userId = StpUtil.getLoginIdAsLong();
+        return R.ok(contractService.finalize(id, dto, userId));
+    }
+
+    @Operation(summary = "重新起草（审批被拒后）")
+    @PostMapping("/{id}/redraft")
+    public R<Void> redraft(@PathVariable Long id) {
+        long userId = StpUtil.getLoginIdAsLong();
+        processService.redraft(userId, id);
+        return R.ok("已重新提交，请等待管理员重新分配审批");
     }
 
     @Operation(summary = "分页查询合同")

@@ -27,6 +27,9 @@ public class PendingTaskVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
+    // ===== User 关联字段 =====
+    private String username;
+
     // ===== Customer 关联字段 =====
     private String customerName;
 }

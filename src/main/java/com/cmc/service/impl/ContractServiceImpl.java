@@ -12,6 +12,7 @@ import com.cmc.entity.User;
 import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractStateMapper;
 import com.cmc.mapper.UserMapper;
+import com.cmc.service.ContractProcessService;
 import com.cmc.service.ContractService;
 import com.cmc.service.ContractVersionService;
 import com.cmc.service.LogService;
@@ -25,9 +26,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * @author NAPH130
- */
 @Service
 @RequiredArgsConstructor
 public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> implements ContractService {
@@ -37,6 +35,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
     private final LogService logService;
     private final NotificationService notificationService;
     private final ContractVersionService versionService;
+    private final ContractProcessService processService;
 
     @Override
     @Transactional
@@ -78,12 +77,44 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
     }
 
     @Override
-    @Transactional
     public Contract finalize(Long id, ContractDTO dto) {
+        long userId = StpUtil.getLoginIdAsLong();
+        return finalize(id, dto, userId);
+    }
+
+    @Override
+    @Transactional
+    public Contract finalize(Long id, ContractDTO dto, Long userId) {
         Contract contract = getById(id);
         if (contract == null) {
             throw new BusinessException("合同不存在");
         }
+        if (!contract.getUserId().equals(userId)) {
+            throw new BusinessException("仅合同起草人可进行定稿操作");
+        }
+
+        Integer currentState = processService.getCurrentState(id);
+        if (currentState == null) {
+            throw new BusinessException("合同状态异常");
+        }
+        if (currentState != 2) {
+            if (currentState == 1) {
+                List<com.cmc.entity.ContractProcess> processes = new ArrayList<>(
+                        processService.lambdaQuery()
+                                .eq(com.cmc.entity.ContractProcess::getContractId, id)
+                                .eq(com.cmc.entity.ContractProcess::getType, 1)
+                                .list());
+                boolean hasCountersigners = !processes.isEmpty();
+                if (hasCountersigners) {
+                    throw new BusinessException("会签尚未全部完成，请等待所有会签人员完成会签后再定稿");
+                }
+            } else {
+                String[] names = {null, "起草", "会签完成", "定稿完成", "审批完成", "签订完成"};
+                String name = currentState < names.length ? names[currentState] : "状态" + currentState;
+                throw new BusinessException("合同当前状态为「" + name + "」，无法重复定稿");
+            }
+        }
+
         contract.setName(dto.getName());
         contract.setContent(dto.getContent());
         contract.setCustomerId(dto.getCustomerId());
@@ -161,9 +192,6 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         return result;
     }
 
-    /**
-     * 批量查询 contract_state 表，取每个合同的最新 type 作为当前状态
-     */
     private void fillStates(List<Contract> contracts) {
         if (contracts == null || contracts.isEmpty()) {
             return;

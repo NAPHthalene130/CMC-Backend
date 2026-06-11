@@ -38,6 +38,12 @@ public class ContractProcessController {
         return R.ok(processService.getPendingTasks(userId, type));
     }
 
+    @Operation(summary = "获取合同的所有流程记录")
+    @GetMapping("/{contractId}")
+    public R<List<PendingTaskVO>> getProcesses(@PathVariable Long contractId) {
+        return R.ok(processService.getContractProcesses(contractId));
+    }
+
     @Operation(summary = "会签合同")
     @PostMapping("/countersign")
     public R<Void> countersign(@Valid @RequestBody ProcessDTO dto) {
