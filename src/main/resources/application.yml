@@ -17,6 +17,7 @@ spring:
 app:
   upload:
     dir: ./data
+    chunk-size: 5242880
 
 mybatis-plus:
   configuration:
