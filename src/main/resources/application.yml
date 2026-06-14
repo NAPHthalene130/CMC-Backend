@@ -12,10 +12,11 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+      location: ./data/tmp
 
 app:
   upload:
-    dir: upload
+    dir: ./data
 
 mybatis-plus:
   configuration:

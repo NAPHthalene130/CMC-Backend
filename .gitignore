@@ -35,3 +35,7 @@ logs/
 # Env
 .env
 .env.local
+
+# File uploads
+data/
+upload/

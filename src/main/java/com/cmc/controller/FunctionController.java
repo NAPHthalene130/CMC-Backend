@@ -29,10 +29,10 @@ public class FunctionController {
         return R.ok(PageResult.of(result));
     }
 
-    @Operation(summary = "获取功能列表")
+    @Operation(summary = "获取功能列表(树形)")
     @GetMapping("/list")
     public R<java.util.List<Function>> list() {
-        return R.ok(functionService.list());
+        return R.ok(functionService.listTree());
     }
 
     @Operation(summary = "新增功能")

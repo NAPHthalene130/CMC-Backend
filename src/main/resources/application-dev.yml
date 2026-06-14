@@ -4,6 +4,10 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      data-source-properties:
+        useUnicode: true
+        characterEncoding: UTF-8
   data:
     redis:
       host: ${REDIS_HOST:localhost}

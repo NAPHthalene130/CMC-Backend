@@ -3,6 +3,7 @@
 -- Database: cms_fastDev2
 -- ============================================
 
+SET NAMES utf8mb4;
 USE cms_fastDev2;
 
 -- 确保角色数据存在

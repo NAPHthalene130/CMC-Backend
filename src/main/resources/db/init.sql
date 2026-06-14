@@ -4,6 +4,8 @@
 -- Version: 1.0
 -- ============================================
 
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS cms_fastDev2 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE cms_fastDev2;
 
