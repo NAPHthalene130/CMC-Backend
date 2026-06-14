@@ -8,9 +8,12 @@ import com.cmc.entity.LoginLog;
 import com.cmc.mapper.LogMapper;
 import com.cmc.mapper.LoginLogMapper;
 import com.cmc.service.LogService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDateTime;
 
@@ -34,9 +37,31 @@ public class LogServiceImpl extends ServiceImpl<LogMapper, Log> implements LogSe
         log.setUserId(userId);
         log.setUsername(username);
         log.setContent(content);
+        log.setIp(getClientIp());
         log.setTime(LocalDateTime.now());
         log.setType("OPERATION");
         save(log);
+    }
+
+    private String getClientIp() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) return null;
+            HttpServletRequest request = attrs.getRequest();
+            String ip = request.getHeader("X-Forwarded-For");
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("X-Real-IP");
+            }
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getRemoteAddr();
+            }
+            if (ip != null && ip.contains(",")) {
+                ip = ip.split(",")[0].trim();
+            }
+            return ip;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     @Override
