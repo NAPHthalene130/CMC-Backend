@@ -125,7 +125,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
         User operator = (User) StpUtil.getSession().get("user");
         if (operator != null) {
             logService.saveLog(operator.getId(), operator.getUsername(),
-                    "分配合同：" + dto.getContractId());
+                    "分配合同：" + contractName);
         }
     }
 
@@ -234,7 +234,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
             }
         }
 
-        logService.saveLog(userId, getUsername(userId), "会签合同：" + dto.getContractId());
+        logService.saveLog(userId, getUsername(userId), "会签合同：" + contractName);
     }
 
     @Override
@@ -269,7 +269,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
             }
         }
 
-        logService.saveLog(userId, getUsername(userId), "审批合同：" + dto.getContractId());
+        logService.saveLog(userId, getUsername(userId), "审批合同：" + contractName);
     }
 
     @Override
@@ -296,7 +296,7 @@ public class ContractProcessServiceImpl extends ServiceImpl<ContractProcessMappe
             }
         }
 
-        logService.saveLog(userId, getUsername(userId), "签订合同：" + dto.getContractId());
+        logService.saveLog(userId, getUsername(userId), "签订合同：" + contractName2);
     }
 
     @Override
