@@ -13,4 +13,5 @@ public class UserDTO {
 
     private String confirmPassword;
     private Long roleId;
+    private Integer status;
 }
