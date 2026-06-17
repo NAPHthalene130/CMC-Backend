@@ -5,9 +5,19 @@ spring:
   profiles:
     active: dev
   servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+      location: ./data/tmp
+
+app:
+  upload:
+    dir: ./data
+    chunk-size: 5242880
 
 mybatis-plus:
   configuration:
@@ -22,8 +32,6 @@ mybatis-plus:
 
 sa-token:
   token-name: Authorization
-  token-style: tik
-  is-read-cookie: false
   timeout: 86400
 
 knife4j:
