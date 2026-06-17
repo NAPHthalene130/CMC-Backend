@@ -33,13 +33,15 @@ class UserServiceImplTest {
     private UserMapper userMapper;
     @Mock
     private LogService logService;
+    @Mock
+    private com.cmc.mapper.RoleMapper roleMapper;
 
     private UserServiceImpl userService;
     private MockedStatic<StpUtil> stpUtilMock;
 
     @BeforeEach
     void setUp() throws Exception {
-        userService = new UserServiceImpl(logService);
+        userService = new UserServiceImpl(logService, roleMapper);
         var field = ServiceImpl.class.getDeclaredField("baseMapper");
         field.setAccessible(true);
         field.set(userService, userMapper);

@@ -9,9 +9,11 @@ import com.cmc.common.exception.BusinessException;
 import com.cmc.dto.ContractDTO;
 import com.cmc.entity.Contract;
 import com.cmc.entity.ContractState;
+import com.cmc.entity.Customer;
 import com.cmc.entity.User;
 import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractStateMapper;
+import com.cmc.mapper.CustomerMapper;
 import com.cmc.mapper.UserMapper;
 import com.cmc.service.ContractProcessService;
 import com.cmc.service.ContractService;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> implements ContractService {
 
     private final ContractStateMapper contractStateMapper;
+    private final CustomerMapper customerMapper;
     private final UserMapper userMapper;
     private final LogService logService;
     private final NotificationService notificationService;
@@ -167,6 +170,8 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         Page<Contract> result = page(new Page<>(page, pageSize), wrapper);
 
         fillStates(result.getRecords());
+        fillDraftUsers(result.getRecords());
+        fillCustomerNames(result.getRecords());
         return result;
     }
 
@@ -175,7 +180,7 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         LambdaQueryWrapper<Contract> wrapper = new LambdaQueryWrapper<Contract>()
                 .orderByDesc(Contract::getCreateTime);
         if (stateType != null) {
-            wrapper.exists("SELECT 1 FROM contract_state cs WHERE cs.contract_id = contract.id AND cs.type = {0}", stateType);
+            wrapper.apply("(SELECT MAX(cs.type) FROM contract_state cs WHERE cs.contract_id = contract.id) = {0}", stateType);
         }
         if (StringUtils.hasText(keyword)) {
             wrapper.and(w -> w.like(Contract::getName, keyword)
@@ -190,6 +195,8 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         Page<Contract> result = page(new Page<>(page, pageSize), wrapper);
 
         fillStates(result.getRecords());
+        fillDraftUsers(result.getRecords());
+        fillCustomerNames(result.getRecords());
         return result;
     }
 
@@ -212,5 +219,47 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
                                 opt -> opt.map(ContractState::getType).orElse(null))));
 
         contracts.forEach(c -> c.setState(stateMap.get(c.getId())));
+    }
+
+    private void fillDraftUsers(List<Contract> contracts) {
+        if (contracts == null || contracts.isEmpty()) {
+            return;
+        }
+        Set<Long> userIds = contracts.stream()
+                .map(Contract::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (userIds.isEmpty()) {
+            return;
+        }
+        List<User> users = userMapper.selectBatchIds(userIds);
+        Map<Long, String> usernameMap = users.stream()
+                .collect(Collectors.toMap(User::getId, User::getUsername));
+        contracts.forEach(c -> {
+            if (c.getUserId() != null) {
+                c.setDraftUser(usernameMap.get(c.getUserId()));
+            }
+        });
+    }
+
+    private void fillCustomerNames(List<Contract> contracts) {
+        if (contracts == null || contracts.isEmpty()) {
+            return;
+        }
+        Set<Long> customerIds = contracts.stream()
+                .map(Contract::getCustomerId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (customerIds.isEmpty()) {
+            return;
+        }
+        List<Customer> customers = customerMapper.selectBatchIds(customerIds);
+        Map<Long, String> nameMap = customers.stream()
+                .collect(Collectors.toMap(Customer::getId, Customer::getName));
+        contracts.forEach(c -> {
+            if (c.getCustomerId() != null) {
+                c.setCustomerName(nameMap.get(c.getCustomerId()));
+            }
+        });
     }
 }

@@ -22,6 +22,14 @@ public class Contract {
     @TableField(exist = false)
     private Integer state;
 
+    /** 起草人（来自 user 表，非数据库字段） */
+    @TableField(exist = false)
+    private String draftUser;
+
+    /** 客户名称（来自 customer 表，非数据库字段） */
+    @TableField(exist = false)
+    private String customerName;
+
     @TableLogic
     private Integer deleted;
 

@@ -10,6 +10,7 @@ import com.cmc.entity.Contract;
 import com.cmc.entity.User;
 import com.cmc.mapper.ContractMapper;
 import com.cmc.mapper.ContractStateMapper;
+import com.cmc.mapper.CustomerMapper;
 import com.cmc.mapper.UserMapper;
 import com.cmc.service.impl.ContractServiceImpl;
 import com.cmc.service.ContractProcessService;
@@ -41,6 +42,8 @@ class ContractServiceImplTest {
     @Mock
     private ContractStateMapper contractStateMapper;
     @Mock
+    private CustomerMapper customerMapper;
+    @Mock
     private UserMapper userMapper;
     @Mock
     private LogService logService;
@@ -56,7 +59,7 @@ class ContractServiceImplTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        contractService = new ContractServiceImpl(contractStateMapper, userMapper,
+        contractService = new ContractServiceImpl(contractStateMapper, customerMapper, userMapper,
                 logService, notificationService, versionService, processService);
         var field = ServiceImpl.class.getDeclaredField("baseMapper");
         field.setAccessible(true);
